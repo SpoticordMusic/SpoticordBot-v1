@@ -1,0 +1,32 @@
+{
+  "name": "spoticordbot",
+  "version": "1.0.0",
+  "description": "Spoticord Music Bot",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpoticordMusic/Spoticord.git"
+  },
+  "keywords": [
+    "discord",
+    "music",
+    "bot"
+  ],
+  "author": "RoDaBaFilms",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/SpoticordMusic/Spoticord/issues"
+  },
+  "homepage": "https://github.com/SpoticordMusic/Spoticord#readme",
+  "dependencies": {
+    "@types/node": "^14.14.35",
+    "discord.js": "^12.5.1",
+    "dotenv": "^8.2.0",
+    "lavalink": "^2.11.0",
+    "node-json-db": "^1.3.0",
+    "typescript": "^4.2.3"
+  }
+}
