@@ -3,15 +3,16 @@ import * as Discord from 'discord.js';
 import assert from 'assert';
 import { PlayerManager } from 'discord.js-lavalink';
 
-import * as CommandHandler from './command';
 import { CommandEmitter } from './command/emitter';
+import * as core from './command/core';
 import { DB } from './db';
 //import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
 import { LavaManager } from './services/lava';
 import ConfigManager from './config';
-import SpotifyService from './services/spotify';
+import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
+import { SpotifyUser, SpotifyWebHelper } from './services/spotify/user';
 
 const _env = dotenv.config().parsed;
 
@@ -34,14 +35,19 @@ if (conf.getDirty()) {
 }
 
 const client = new Discord.Client();
-const cmdEmitter = new CommandEmitter();
 const dbEngine: DB = new JSONPoweredDB();
-const spotifyEngine = new SpotifyService(conf, client);
+const cmdEmitter = new CommandEmitter(conf, dbEngine);
+const spotifyEngine = new MusicPlayerService(conf, client);
 const linkerService = new LinkerService();
 
-CommandHandler.Initialize(conf, cmdEmitter, dbEngine);
-
 client.on('ready', async () => {
+
+    // Add command handlers
+    cmdEmitter.addCommandHandler('link', core.link);
+    cmdEmitter.addCommandHandler('unlink', core.unlink);
+    cmdEmitter.addCommandHandler('rename', core.rename, 'name');
+    cmdEmitter.addCommandHandler('help', core.help, 'h');
+
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 
     const nodes = [{ host: 'localhost', port: 2333, password: '12345' }];
@@ -53,7 +59,7 @@ client.on('ready', async () => {
 
     let lavaReady = false;
 
-    manager.on('ready', () => {
+    manager.on('ready', async () => {
         lavaReady = true;
 
     
@@ -62,6 +68,13 @@ client.on('ready', async () => {
         // I have not yet figured out a way to validate the client id and client secret without 
         //  performing a oauth authorization grant, so this function won't check if these parameters are valid
         spotifyEngine.initialize(manager);
+        SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+
+        const demoUser = new SpotifyUser('389786424142200835', dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+
+        const ret = await demoUser.initialize();
+    
+        console.log(`Initialize = ${ret}`);
     });
 
     manager.on('error', (e) => {
@@ -89,7 +102,7 @@ client.on('message', (msg) => {
     if (!msg.content.startsWith(conf.get('prefix'))) return;
 
     const args = msg.content.substr(1).split(' ');
-    const cmd = args.shift();
+    const cmd = args.shift().toLowerCase();
 
     console.debug(`[CMD] ${cmd} -> ${args.map(a => `"${a}"`).join(' ')}`)
 

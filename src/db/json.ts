@@ -128,9 +128,9 @@ export default class JSONPoweredDB implements DB {
         if (coll[discord_id]) return;
 
         this.db.push(`/userinfo/${discord_id}`, {
-            discordID: discord_id,
+            discord_id,
             prefs: {
-                displayName: 'Spoticord'
+                display_name: 'Spoticord'
             }
         });
     }
