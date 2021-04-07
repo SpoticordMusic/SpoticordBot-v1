@@ -70,11 +70,11 @@ client.on('ready', async () => {
         spotifyEngine.initialize(manager);
         SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
 
-        const demoUser = new SpotifyUser('389786424142200835', dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+        // const demoUser = new SpotifyUser('389786424142200835', dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
 
-        const ret = await demoUser.initialize();
+        // const ret = await demoUser.initialize();
     
-        console.log(`Initialize = ${ret}`);
+        // console.log(`Initialize = ${ret}`);
     });
 
     manager.on('error', (e) => {
