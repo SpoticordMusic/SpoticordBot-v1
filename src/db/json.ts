@@ -18,13 +18,13 @@ export default class JSONPoweredDB implements DB {
         return true;
     }
 
-    async initializeLink(discordID: string): Promise<string> {
+    async initializeLink(discord_id: string): Promise<string> {
         let data = this.db.getObject<DBRequest[]>(`/requests`);
         let i = 0;
 
         // What the fuck is this
         if (data.find((d, _i) => {
-            if (d.discordID == discordID) {
+            if (d.discord_id == discord_id) {
                 i = _i;
                 return true;
             }
@@ -33,20 +33,60 @@ export default class JSONPoweredDB implements DB {
         })) return data[i].token;
 
         let token = makeid(32);
-        this.db.push(`/requests`, [{
-            discordID,
+        this.db.push(`/requests`, <DBRequest[]>[{
+            discord_id,
             token
         }], false);
     
         return token;
     }
 
-    async updateAccessToken(discordID: string, accessToken: string): Promise<void> {
-        const token = this.db.getObject<DBToken>(`/tokens/${discordID}`);
-    
-        token.spotifyAccessToken = accessToken;
+    async getLink(token: string): Promise<DBRequest | null> {
+        let data = this.db.getObject<DBRequest[]>(`/requests`);
+        let i = 0;
 
-        this.db.push(`/tokens/${discordID}`, token);
+        // And again, this shitshow of a function
+        if (data.find((d, _i) => {
+            if (d.token == token) {
+                i = _i;
+                return true;
+            }
+
+            return false;
+        })) return data[i];
+
+        return null;
+    }
+
+    async deleteLink(token: string): Promise<void> {
+        let data = this.db.getObject<DBRequest[]>(`/requests`);
+        let i = 0;
+
+        // And again, this shitshow of a function
+        if (data.find((d, _i) => {
+            if (d.token == token) {
+                i = _i;
+                return true;
+            }
+
+            return false;
+        })) this.db.delete(`/requests[${i}]`);
+    }
+
+    async insertToken(discord_id: string, access_token: string, refresh_token: string): Promise<void> {        
+        this.db.push(`/tokens/${discord_id}`, <DBToken>{
+            discord_id,
+            access_token,
+            refresh_token
+        });
+    }
+
+    async updateAccessToken(discord_id: string, access_token: string): Promise<void> {
+        const token = this.db.getObject<DBToken>(`/tokens/${discord_id}`);
+    
+        token.access_token = access_token;
+
+        this.db.push(`/tokens/${discord_id}`, token);
     }
 
     async getStoredTokens(): Promise<DBToken[]> {
@@ -55,40 +95,40 @@ export default class JSONPoweredDB implements DB {
         return Object.keys(obj).map((objKey) => obj[objKey]);
     }
 
-    async getToken(discordID: string): Promise<DBToken | null> {
+    async getToken(discord_id: string): Promise<DBToken | null> {
         try {
-            return this.db.getObject<DBToken>(`/tokens/${discordID}`);
+            return this.db.getObject<DBToken>(`/tokens/${discord_id}`);
         } catch {
             return null;
         }
     }
 
-    async deleteToken(discordID: string): Promise<void> {
-        this.db.delete(`/tokens/${discordID}`);
+    async deleteToken(discord_id: string): Promise<void> {
+        this.db.delete(`/tokens/${discord_id}`);
     }
 
-    async getDeviceName(discordID: string): Promise<string> {
-        this.makeSureUserinfo(discordID);
+    async getDeviceName(discord_id: string): Promise<string> {
+        this.makeSureUserinfo(discord_id);
 
-        return this.db.getData(`/userinfo/${discordID}/prefs/displayName`);
+        return this.db.getData(`/userinfo/${discord_id}/prefs/display_name`);
     }
 
-    async setDeviceName(discordID: string, displayName: string): Promise<void> {
-        this.makeSureUserinfo(discordID);
+    async setDeviceName(discord_id: string, display_name: string): Promise<void> {
+        this.makeSureUserinfo(discord_id);
 
-        this.db.push(`/userinfo/${discordID}/prefs/displayName`, displayName);
+        this.db.push(`/userinfo/${discord_id}/prefs/display_name`, display_name);
     }
 
-    private makeSureUserinfo(discordID: string) {
+    private makeSureUserinfo(discord_id: string) {
         let coll = this.db.getObject('/userinfo');
 
         if (!coll) this.db.push('/userinfo', {});
         if (!coll) coll = {};
 
-        if (coll[discordID]) return;
+        if (coll[discord_id]) return;
 
-        this.db.push(`/userinfo/${discordID}`, {
-            discordID,
+        this.db.push(`/userinfo/${discord_id}`, {
+            discordID: discord_id,
             prefs: {
                 displayName: 'Spoticord'
             }

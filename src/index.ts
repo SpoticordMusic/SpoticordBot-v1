@@ -1,13 +1,16 @@
 import * as dotenv from 'dotenv';
 import * as Discord from 'discord.js';
 import assert from 'assert';
-import { Node } from 'lavalink';
+import { PlayerManager } from 'discord.js-lavalink';
 
 import * as CommandHandler from './command';
 import { CommandEmitter } from './command/emitter';
 import { DB } from './db';
 import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
+import { LavaManager } from './services/lava';
+import ConfigManager from './config';
+import SpotifyService from './services/spotify';
 
 const _env = dotenv.config().parsed;
 
@@ -22,25 +25,35 @@ if (process.env.NODE_ENV === 'development') {
     })
 }
 
-assert(!!process.env.TOKEN, "A token must be provided");
-assert(!!process.env.PREFIX, "A prefix must be provided")
+const conf = new ConfigManager();
+
+if (conf.getDirty()) {
+    console.error("[FATAL] A dirty (or nonexistant) config.json file was found, please generate a new one");
+    assert(false, conf.getDirty());
+}
 
 const client = new Discord.Client();
 const cmdEmitter = new CommandEmitter();
-const dbEngine: DB = process.env.DB_ENGINE === 'MONGO' ? new MongoPoweredDB() : new JSONPoweredDB();
+const dbEngine: DB = new JSONPoweredDB();
+const spotifyEngine = new SpotifyService(conf, client);
 
-CommandHandler.Initialize(cmdEmitter, dbEngine);
+CommandHandler.Initialize(conf, cmdEmitter, dbEngine);
 
-client.on('ready', () => {
+client.on('ready', async () => {
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 
-    const voice = new Node({
-        password: '123',
-        userID: process.env.DC_BOT_ID,
-        send: (guildID, packet) {
-            client.guilds.cache.has(guildID) && client.ws.
-        }
-    })
+    const nodes = [{ host: 'localhost', port: 2333, password: '12345' }];
+
+    const manager = new LavaManager(client, nodes, {
+        user: client.user.id,
+        shards: 1
+    });
+    
+    console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
+
+    // I have not yet figured out a way to validate the client id and client secret without 
+    //  performing a oauth authorization grant, so this function won't check if these parameters are valid
+    spotifyEngine.initialize(manager);
 });
 
 client.on('guildCreate', (guild) => {
@@ -53,7 +66,7 @@ client.on('guildDelete', (guild) => {
 
 client.on('message', (msg) => {
     if (!msg.guild) return;
-    if (!msg.content.startsWith(process.env.PREFIX)) return;
+    if (!msg.content.startsWith(conf.get('prefix'))) return;
 
     const args = msg.content.substr(1).split(' ');
     const cmd = args.shift();
@@ -71,5 +84,5 @@ dbEngine.initialize().then((success) => {
 
     console.log(`[INFO] Database initialized, starting Discord initialization...`);
 
-    client.login(process.env.TOKEN);
+    client.login(conf.get('token'));
 });

@@ -1,12 +1,12 @@
 export interface DBToken {
-    spotifyAccessToken: string,
-    spotifyRefreshToken: string,
-    discordID: string,
+    access_token: string,
+    refresh_token: string,
+    discord_id: string,
     [key: string]: any
 }
 
 export interface DBRequest {
-    discordID: string,
+    discord_id: string,
     token: string
 }
 
@@ -21,17 +21,40 @@ export interface DB {
     /**
      * Initialize a link for the user to connect their Spotify and Discord account
      * 
-     * @param discordID The user (Discord ID) of which to initialize a link
+     * @param discord_id The user (Discord ID) of which to initialize a link
      */
-    initializeLink(discordID: string): Promise<string>,
+    initializeLink(discord_id: string): Promise<string>,
+
+    /**
+     * Gets the link object for a user trying to connect his Spotify account
+     * 
+     * @param token The token assigned to the link object
+     */
+    getLink(token: string): Promise<DBRequest | null>,
+
+    /**
+     * 
+     * 
+     * @param token The token assigned to the link object
+     */
+    deleteLink(token: string): Promise<void>,
+
+    /**
+     * Insert a Spotify access and refresh token linked with a Discord account into the database
+     * 
+     * @param discord_id The associated Discord ID
+     * @param access_token The Spotify access token
+     * @param refresh_token The Spotify refresh token
+     */
+    insertToken(discord_id: string, access_token: string, refresh_token: string): Promise<void>,
 
     /**
      * Update a users Spotify access token
      * 
-     * @param discordID The user (Discord ID)
-     * @param accessToken The Spotify access token
+     * @param discord_id The user (Discord ID)
+     * @param access_token The Spotify access token
      */
-    updateAccessToken(discordID: string, accessToken: string): Promise<void>,
+    updateAccessToken(discord_id: string, access_token: string): Promise<void>,
 
     /**
      * Get all tokens stored in the database
@@ -43,29 +66,29 @@ export interface DB {
     /**
      * Get the token attached to the given user
      * 
-     * @param discordID The user (Discord ID)
+     * @param discord_id The user (Discord ID)
      */
-    getToken(discordID: string): Promise<DBToken | null>,
+    getToken(discord_id: string): Promise<DBToken | null>,
 
     /**
      * Delete the token attached to the given user
      * 
-     * @param discordID The user (Discord ID)
+     * @param discord_id The user (Discord ID)
      */
-    deleteToken(discordID: string): Promise<void>,
+    deleteToken(discord_id: string): Promise<void>,
 
     /**
      * Get the Spotify device display name from the given user
      * 
-     * @param discordID The user (Discord ID)
+     * @param discord_id The user (Discord ID)
      */
-    getDeviceName(discordID: string): Promise<string>,
+    getDeviceName(discord_id: string): Promise<string>,
 
     /**
      * Set the Spotify device display name for the given user
      * 
-     * @param discordID The user (Discord ID)
-     * @param displayName The Spotify display name
+     * @param discord_id The user (Discord ID)
+     * @param display_name The Spotify display name
      */
-    setDeviceName(discordID: string, displayName: string): Promise<void>
+    setDeviceName(discord_id: string, display_name: string): Promise<void>
 }

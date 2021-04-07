@@ -6,7 +6,8 @@
         "outDir": "build/",
         "lib": ["ES6", "DOM"],
         "esModuleInterop": true,
-        "types": ["node"]
+        "types": ["node"],
+        "resolveJsonModule": true
     },
     "include": ["src/**/*"],
     "exclude": ["node_modules", "**/*.spec.ts"]

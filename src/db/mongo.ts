@@ -17,7 +17,7 @@ export default class MongoPoweredDB implements DB {
     }
 
     async getToken(discordID: string): Promise<DBToken> {
-        return {discordID: '', spotifyAccessToken: '', spotifyRefreshToken: ''}
+        return {discord_id: '', access_token: '', refresh_token: ''}
     }
 
     async deleteToken(discordID: string): Promise<void> {

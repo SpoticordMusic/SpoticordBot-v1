@@ -4,3 +4,6 @@ node_modules/
 
 # When using JsonDB Engine
 db.json
+
+# Configuration files
+config.json
