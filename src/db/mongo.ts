@@ -1,5 +1,6 @@
 import { DB, DBToken } from ".";
 
+/*
 export default class MongoPoweredDB implements DB {
     async initialize(): Promise<boolean> {
         return false;
@@ -29,4 +30,4 @@ export default class MongoPoweredDB implements DB {
 
     async setDeviceName(discordID: string, displayName: string): Promise<void> {
     }
-}
+}*/

@@ -6,11 +6,12 @@ import { PlayerManager } from 'discord.js-lavalink';
 import * as CommandHandler from './command';
 import { CommandEmitter } from './command/emitter';
 import { DB } from './db';
-import MongoPoweredDB from './db/mongo';
+//import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
 import { LavaManager } from './services/lava';
 import ConfigManager from './config';
 import SpotifyService from './services/spotify';
+import LinkerService from './services/linker';
 
 const _env = dotenv.config().parsed;
 
@@ -36,6 +37,7 @@ const client = new Discord.Client();
 const cmdEmitter = new CommandEmitter();
 const dbEngine: DB = new JSONPoweredDB();
 const spotifyEngine = new SpotifyService(conf, client);
+const linkerService = new LinkerService();
 
 CommandHandler.Initialize(conf, cmdEmitter, dbEngine);
 
@@ -48,12 +50,30 @@ client.on('ready', async () => {
         user: client.user.id,
         shards: 1
     });
-    
-    console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
 
-    // I have not yet figured out a way to validate the client id and client secret without 
-    //  performing a oauth authorization grant, so this function won't check if these parameters are valid
-    spotifyEngine.initialize(manager);
+    let lavaReady = false;
+
+    manager.on('ready', () => {
+        lavaReady = true;
+
+    
+        console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
+
+        // I have not yet figured out a way to validate the client id and client secret without 
+        //  performing a oauth authorization grant, so this function won't check if these parameters are valid
+        spotifyEngine.initialize(manager);
+    });
+
+    manager.on('error', (e) => {
+        if (!lavaReady) {
+            console.error(`[FATAL] Lavalink Initialization failed`);
+            
+            client.destroy();
+            process.exit(-1);
+        }
+
+        console.error('Lavalink error: ', e);
+    });
 });
 
 client.on('guildCreate', (guild) => {
@@ -82,7 +102,16 @@ dbEngine.initialize().then((success) => {
         process.exit(-1);
     }
 
-    console.log(`[INFO] Database initialized, starting Discord initialization...`);
+    console.log(`[INFO] Database initialized, starting Linking service...`);
 
-    client.login(conf.get('token'));
+    linkerService.initialize(conf, dbEngine).then((success) => {
+        if (!success) {
+            console.error(`[FATAL] Linking service initialization failed`);
+            process.exit(-1);
+        }
+
+        console.log(`[INFO] Linker service initialized, starting Discord initialization...`);
+
+        client.login(conf.get('token'));
+    });
 });
