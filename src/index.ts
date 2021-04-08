@@ -13,6 +13,7 @@ import ConfigManager from './config';
 import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
 import { SpotifyUser, SpotifyWebHelper } from './services/spotify/user';
+import { SpotifyPlayer } from './services/spotify/player';
 
 const _env = dotenv.config().parsed;
 
@@ -37,7 +38,7 @@ if (conf.getDirty()) {
 const client = new Discord.Client();
 const dbEngine: DB = new JSONPoweredDB();
 const cmdEmitter = new CommandEmitter(conf, dbEngine);
-const spotifyEngine = new MusicPlayerService(conf, client);
+const musicService = new MusicPlayerService(conf, client, dbEngine);
 const linkerService = new LinkerService();
 
 client.on('ready', async () => {
@@ -67,14 +68,51 @@ client.on('ready', async () => {
 
         // I have not yet figured out a way to validate the client id and client secret without 
         //  performing a oauth authorization grant, so this function won't check if these parameters are valid
-        spotifyEngine.initialize(manager);
+        musicService.initialize(manager);
         SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
 
-        // const demoUser = new SpotifyUser('389786424142200835', dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+        console.log(`[INFO] Initialization completed`);
 
-        // const ret = await demoUser.initialize();
-    
-        // console.log(`Initialize = ${ret}`);
+        const player = await musicService.joinChannel('790885090808299542', '798646281718333461');
+
+        
+
+        /*const demoUser = new SpotifyUser('389786424142200835', dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+
+        demoUser.on('volume', (volume) => {
+            console.log(`[DEMO] volume = ${volume}`);
+        });
+
+        demoUser.on('playback-lost', (e) => {
+            console.log(`[DEMO] playback-lost`);
+        });
+
+        demoUser.on('playback-update-pre', () => {
+            console.log(`[DEMO] playback-update-pre`);
+        });
+
+        demoUser.on('pause-playback', (e) => {
+            console.log(`[DEMO] pause-playback = ${e.paused}`)
+        });
+
+        demoUser.on('seek-playback', (e) => {
+            console.log(`[DEMO] seek-playback = ${e.position}`);
+        });
+
+        demoUser.on('modify-playback', () => {
+            console.log(`[DEMO] modify-playback`);
+        });
+
+        demoUser.on('play-track', (e) => {
+            console.log(`[DEMO] play-track = paused = ${e.paused}, position = ${e.position}`);
+        });
+
+        demoUser.on('unknown', (p) => {
+            console.log(`[DEMO] unknown`);
+            console.log(p);
+        });
+
+        await demoUser.initialize();*/
     });
 
     manager.on('error', (e) => {

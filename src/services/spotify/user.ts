@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import { DB, DBToken } from "../../db";
 import axios from 'axios';
 import WebSocket from 'ws';
+import { SpotifyStateManager } from "./state";
 
 export class SpotifyUser extends EventEmitter {
     private initialized: boolean = false;
@@ -58,10 +59,8 @@ export class SpotifyUser extends EventEmitter {
 
         if (!this.connection_id) {
             if (data.type === 'message' && data.method === 'PUT' && data.headers['Spotify-Connection-Id']) {
-                this.connection_id = data.headers['Spotify-Connection-Id'];
-
                 let params = new URLSearchParams();
-                params.append('connection_id', this.connection_id);
+                params.append('connection_id', data.headers['Spotify-Connection-Id']);
 
                 let response = await axios.put(`https://api.spotify.com/v1/me/notifications/user?${params}`, null, {
                     headers: {
@@ -71,14 +70,14 @@ export class SpotifyUser extends EventEmitter {
                 });
 
                 if (response.status >= 400) {
-                    console.error(`[ERROR] /notifications/user failed`);
+                    console.error(`[ERROR] /notifications/user failed: ${response.status}`);
                     
                     return;
                 }
 
                 let postData: any = {
                     client_version: 'harmony:3.19.1-441cc8f',
-                    connection_id: this.connection_id,
+                    connection_id: data.headers['Spotify-Connection-Id'],
                     device: {
                         brand: 'public_js-sdk',
                         capabilities: {
@@ -107,13 +106,14 @@ export class SpotifyUser extends EventEmitter {
                 });
 
                 if (response.status >= 400) {
-                    console.error(`[ERROR] Device creation failed`);
+                    console.error(`[ERROR] Device creation failed: ${response.status}`);
                     
                     return;
                 }
 
                 this.state_manager = new SpotifyStateManager(this.device_id, response.data.initial_seq_num, this.token, this.client_id, this.client_secret);
-            
+                this.connection_id = data.headers['Spotify-Connection-Id'];
+
                 postData = {
                     seq_num: null,
                     command_id: '',
@@ -129,6 +129,101 @@ export class SpotifyUser extends EventEmitter {
             }
 
             return;
+        }
+
+        if (data.uri !== 'hm://track-playback/v1/command') return;
+
+        for (const payload of data.payloads) {
+            if (payload.type === 'set_volume') {
+                await axios.put(`https://api.spotify.com/v1/track-playback/v1/devices/${this.device_id}/volume`, {
+                    seq_num: null,
+                    command_id: '',
+                    volume: payload.volume
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${this.token.access_token}`
+                    },
+                    validateStatus: () => true
+                });
+
+                this.emit('volume', payload.volume);
+            } else if (payload.type === 'replace_state') {
+                this.state_manager.replaceState(payload);
+
+                if (!this.state_manager.isActiveDevice()) {
+                    if (this.state_manager.wasActiveDevice()) this.emit('playback-lost');
+
+                    return;
+                }
+
+                this.emit('playback-update-pre');
+
+                if (this.state_manager.isSameStateAsBefore()) {
+
+                    let emitHappened = false;
+
+                    // Check if pause state changed
+                    if (this.state_manager.isPaused() !== this.state_manager.wasPaused()) {
+                        let pos = 0;
+
+                        this.emit('pause-playback', {
+                            paused: this.state_manager.isPaused(), 
+                            setPosition: (position) => pos = position
+                        });
+
+                        await this.state_manager.emitPaused(pos, this.state_manager.isPaused());
+
+                        emitHappened = true;
+                    }
+
+                    if (this.state_manager.isSeeking()) {
+                        let prevPos = 0;
+
+                        this.emit('seek-playback', {
+                            position: this.state_manager.getSeek(),
+                            setPosition: (position) => prevPos = position
+                        });
+
+                        await this.state_manager.emitSeek(this.state_manager.getSeek(), prevPos);
+
+                        emitHappened = true;
+                    }
+
+                    if (!emitHappened) {
+                        let pos = 0;
+
+                        this.emit('modify-playback', {
+                            setPosition: (position) => pos = position
+                        });
+
+                        await this.state_manager.emitModify(pos);
+                    }
+
+                    return;
+                }
+
+                let isPaused = this.state_manager.isPaused();
+
+                await this.state_manager.emitBTL();
+
+                let position = 0;
+                if (this.state_manager.isSeeking())
+                    position = this.state_manager.getSeek();
+                
+                await this.state_manager.emitSeek(position, 0);
+
+                if (isPaused) {
+                    await this.state_manager.emitPaused(position, true);
+                }
+
+                this.emit('play-track', {
+                    paused: isPaused,
+                    position,
+                    track: this.state_manager.getCurrentTrack()
+                });
+            } else {
+                this.emit('unknown', payload);
+            }
         }
     }
 
@@ -204,8 +299,4 @@ export class SpotifyWebHelper {
         
         return true;
     }
-}
-
-class SpotifyStateManager {
-    constructor(protected device_id: string, protected seq: number, protected token: DBToken, protected client_id: string, protected client_secret: string) {}
 }
