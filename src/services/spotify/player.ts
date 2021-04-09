@@ -1,5 +1,5 @@
 import { Client } from "discord.js";
-import { Player } from "discord.js-lavalink";
+import { LavalinkEvent, Player } from "@lavacord/discord.js";
 import EventEmitter from "events";
 import { DB } from "../../db";
 import { LavaManager, LavaTrackInfo } from "../lava";
@@ -21,17 +21,19 @@ export class SpotifyPlayer extends EventEmitter {
     constructor(public guild_id: string, public channel_id: string, public client: Client, public music: MusicPlayerService, private db: DB) {
         super();
 
+        this.onPlayerEnd = this.onPlayerEnd.bind(this);
+
         this.manager = music.getLavaManager();
     }
 
     public async join() {
-        this.player = this.manager.join({
+        this.player = await this.manager.join({
             channel: this.channel_id,
             guild: this.guild_id,
-            host: 'localhost'
+            node: this.manager.idealNodes[0].id
         }, { selfdeaf: true });
 
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        this.player.on('end', this.onPlayerEnd);
 
         await this.player.volume(20);
 
@@ -77,6 +79,16 @@ export class SpotifyPlayer extends EventEmitter {
         }
     }
 
+    protected async onPlayerEnd(data: LavalinkEvent) {
+        if (data.reason === 'REPLACED') return console.debug('[REPLACED]');
+        if (data.reason === 'CLEANUP') return console.debug('[CLEANUP]');
+        if (data.reason === 'STOPPED') return console.debug('[STOPPED]');
+        
+        if (!this.host || !this.player) return;
+
+        this.host.advanceNext();
+    }
+
     protected async onVolume(user: SpotifyUser, volume: number) {
         
         volume = Math.min(150, Math.max(0, volume / 65535 * 20));
@@ -87,12 +99,18 @@ export class SpotifyPlayer extends EventEmitter {
         }
     }
 
-    protected onPlaybackLost(user: SpotifyUser) {
+    protected async onPlaybackLost(user: SpotifyUser) {
+        this.players.splice(this.players.indexOf(user), 1);
+
         if (this.host?.discord_id === user.discord_id) {
             this.host = null;
-        }
 
-        this.players.splice(this.players.indexOf(user), 1);
+            if (this.players.length < 1 && this.player.playing) {
+                await this.player.stop();
+            } else {
+                this.host = this.players[0];
+            }
+        }
 
         console.debug(`playback-lost`);
     }

@@ -142,6 +142,12 @@ export class SpotifyStateManager {
     public replaceState(state: SpotifyState) {
         this.previous_state = this.current_state;
         this.current_state = state;
+
+        const stateIdx = this.current_state.state_ref.state_index;
+        const _state = this.current_state.state_machine.states[stateIdx];
+        if (!_state.transitions.advance) return;
+
+        console.log({advance: _state.transitions.advance});
     }
 
     public isActiveDevice(): boolean {
@@ -182,6 +188,17 @@ export class SpotifyStateManager {
 
     public getCurrentTrack(): Track {
         return this.current_state.state_machine.tracks[this.current_state.state_machine.states[this.current_state.state_ref.state_index].track];
+    }
+
+    public advanceTrack(): boolean {
+        if (!this.isActiveDevice()) return false;
+
+        const stateIdx = this.current_state.state_ref.state_index;
+        const state = this.current_state.state_machine.states[stateIdx];
+        if (!state.transitions.advance) return false;
+
+        this.current_state.state_ref = state.transitions.advance;
+        return true;
     }
 
     public async emitPaused(position: number, paused: boolean): Promise<boolean> {
@@ -263,6 +280,22 @@ export class SpotifyStateManager {
                 duration: this.current_state.state_machine.tracks[this.current_state.state_machine.states[this.current_state.state_ref.state_index].track].metadata.duration
             },
             debug_source: 'before_track_load'
+        }
+
+        return await this.emit(payload);
+    }
+
+    public async emitClearState() {
+        const payload = {
+            seq_num: ++this.seq,
+            state_ref: null,
+            sub_state: {
+                stream_time: 0,
+                position: 0,
+                playback_speed: 0,
+                duration: 0
+            },
+            debug_source: 'state_clear'
         }
 
         return await this.emit(payload);

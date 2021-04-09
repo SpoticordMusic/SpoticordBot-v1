@@ -151,7 +151,10 @@ export class SpotifyUser extends EventEmitter {
                 this.state_manager.replaceState(payload);
 
                 if (!this.state_manager.isActiveDevice()) {
-                    if (this.state_manager.wasActiveDevice()) this.emit('playback-lost');
+                    if (this.state_manager.wasActiveDevice()) {
+                        await this.state_manager.emitClearState();
+                        this.emit('playback-lost');
+                    }
 
                     return;
                 }
@@ -204,7 +207,9 @@ export class SpotifyUser extends EventEmitter {
 
                 let isPaused = this.state_manager.isPaused();
 
-                await this.state_manager.emitBTL();
+                if (!await this.state_manager.emitBTL()) {
+                    console.error('[ERROR] Before Track Load failed');
+                }
 
                 let position = 0;
                 if (this.state_manager.isSeeking())
@@ -225,6 +230,26 @@ export class SpotifyUser extends EventEmitter {
                 this.emit('unknown', payload);
             }
         }
+    }
+
+    public async advanceNext() {
+        if (!this.state_manager.advanceTrack()) {
+            // This should never happen
+            console.debug('It happened');
+            return;
+        }
+
+        if (!await this.state_manager.emitBTL()) {
+            console.error('[ERROR] Before Track Load failed');
+        }
+        
+        await this.state_manager.emitSeek(0, 0);
+
+        this.emit('play-track', {
+            paused: this.state_manager.isPaused(),
+            position: 0,
+            track: this.state_manager.getCurrentTrack()
+        });
     }
 
     protected wsOnClose(event: WebSocket.CloseEvent) {

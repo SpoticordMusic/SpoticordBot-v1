@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv';
 import * as Discord from 'discord.js';
 import assert from 'assert';
-import { PlayerManager } from 'discord.js-lavalink';
 
 import { CommandEmitter } from './command/emitter';
 import * as core from './command/core';
@@ -12,8 +11,7 @@ import { LavaManager } from './services/lava';
 import ConfigManager from './config';
 import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
-import { SpotifyUser, SpotifyWebHelper } from './services/spotify/user';
-import { SpotifyPlayer } from './services/spotify/player';
+import { SpotifyWebHelper } from './services/spotify/user';
 
 const _env = dotenv.config().parsed;
 
@@ -43,6 +41,10 @@ const linkerService = new LinkerService();
 
 client.on('ready', async () => {
 
+    await client.user.setActivity({
+        name: 'EXPERIMENTAL: Report bugs ASAP'
+    });
+
     // Add command handlers
     cmdEmitter.addCommandHandler('link', core.link);
     cmdEmitter.addCommandHandler('unlink', core.unlink);
@@ -51,7 +53,7 @@ client.on('ready', async () => {
 
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 
-    const nodes = [{ host: 'localhost', port: 2333, password: '12345' }];
+    const nodes = [{ id: 'default', host: 'localhost', port: 2333, password: '12345' }];
 
     const manager = new LavaManager(client, nodes, {
         user: client.user.id,
@@ -59,61 +61,6 @@ client.on('ready', async () => {
     });
 
     let lavaReady = false;
-
-    manager.on('ready', async () => {
-        lavaReady = true;
-
-    
-        console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
-
-        // I have not yet figured out a way to validate the client id and client secret without 
-        //  performing a oauth authorization grant, so this function won't check if these parameters are valid
-        musicService.initialize(manager);
-        SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
-
-        console.log(`[INFO] Initialization completed`);
-
-        const player = await musicService.joinChannel('790885090808299542', '798646281718333461');
-
-        
-
-        /*const demoUser = new SpotifyUser('389786424142200835', dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
-
-        demoUser.on('volume', (volume) => {
-            console.log(`[DEMO] volume = ${volume}`);
-        });
-
-        demoUser.on('playback-lost', (e) => {
-            console.log(`[DEMO] playback-lost`);
-        });
-
-        demoUser.on('playback-update-pre', () => {
-            console.log(`[DEMO] playback-update-pre`);
-        });
-
-        demoUser.on('pause-playback', (e) => {
-            console.log(`[DEMO] pause-playback = ${e.paused}`)
-        });
-
-        demoUser.on('seek-playback', (e) => {
-            console.log(`[DEMO] seek-playback = ${e.position}`);
-        });
-
-        demoUser.on('modify-playback', () => {
-            console.log(`[DEMO] modify-playback`);
-        });
-
-        demoUser.on('play-track', (e) => {
-            console.log(`[DEMO] play-track = paused = ${e.paused}, position = ${e.position}`);
-        });
-
-        demoUser.on('unknown', (p) => {
-            console.log(`[DEMO] unknown`);
-            console.log(p);
-        });
-
-        await demoUser.initialize();*/
-    });
 
     manager.on('error', (e) => {
         if (!lavaReady) {
@@ -125,6 +72,21 @@ client.on('ready', async () => {
 
         console.error('Lavalink error: ', e);
     });
+
+    await manager.connect();
+
+    lavaReady = true;
+
+    console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
+
+    // I have not yet figured out a way to validate the client id and client secret without 
+    //  performing a oauth authorization grant, so this function won't check if these parameters are valid
+    musicService.initialize(manager);
+    SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+
+    console.log(`[INFO] Initialization completed`);
+
+    const player = await musicService.joinChannel('790885090808299542', '798646281718333461');
 });
 
 client.on('guildCreate', (guild) => {

@@ -1,5 +1,5 @@
 import { Client } from 'discord.js';
-import { LavalinkNodeOptions, PlayerManager, PlayerManagerOptions } from 'discord.js-lavalink';
+import { LavalinkNodeOptions, Manager, ManagerOptions } from '@lavacord/discord.js';
 import fetch from 'node-fetch';
 import { URLSearchParams } from 'url';
 
@@ -17,13 +17,13 @@ export interface LavaTrackInfo {
     }
 }
 
-export class LavaManager extends PlayerManager {
-    constructor(client: Client, nodes: LavalinkNodeOptions[], opts: PlayerManagerOptions) {
+export class LavaManager extends Manager {
+    constructor(client: Client, nodes: LavalinkNodeOptions[], opts: ManagerOptions) {
         super(client, nodes, opts);
     }
 
     public async getSongs(search: string): Promise<LavaTrackInfo[]> {
-        const node = this.nodes.first();
+        const node = this.idealNodes[0];
 
         const params = new URLSearchParams();
         params.append("identifier", search);
