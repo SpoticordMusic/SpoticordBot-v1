@@ -83,7 +83,7 @@ export class SpotifyPlayer extends EventEmitter {
         if (data.reason === 'REPLACED') return console.debug('[REPLACED]');
         if (data.reason === 'CLEANUP') return console.debug('[CLEANUP]');
         if (data.reason === 'STOPPED') return console.debug('[STOPPED]');
-        
+
         if (!this.host || !this.player) return;
 
         this.host.advanceNext();

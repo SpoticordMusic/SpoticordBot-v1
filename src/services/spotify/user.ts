@@ -11,6 +11,7 @@ export class SpotifyUser extends EventEmitter {
     private socket: WebSocket;
     private token: DBToken;
     private state_manager: SpotifyStateManager;
+    private repeat_skip: boolean = false;
 
     private pingInterval: NodeJS.Timeout;
 

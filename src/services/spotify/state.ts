@@ -137,17 +137,13 @@ export class SpotifyStateManager {
     private current_state: SpotifyState;
     private previous_state: SpotifyState;
 
+    private last_payload: any;
+
     constructor(protected device_id: string, protected seq: number, protected token: DBToken, protected client_id: string, protected client_secret: string) {}
 
     public replaceState(state: SpotifyState) {
         this.previous_state = this.current_state;
         this.current_state = state;
-
-        const stateIdx = this.current_state.state_ref.state_index;
-        const _state = this.current_state.state_machine.states[stateIdx];
-        if (!_state.transitions.advance) return;
-
-        console.log({advance: _state.transitions.advance});
     }
 
     public isActiveDevice(): boolean {
