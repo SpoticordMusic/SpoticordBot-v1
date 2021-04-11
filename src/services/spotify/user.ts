@@ -6,6 +6,8 @@ import { SpotifyStateManager } from "./state";
 
 export class SpotifyUser extends EventEmitter {
     private initialized: boolean = false;
+    private destroyed: boolean = false;
+
     private connection_id: string = null;
     private device_id: string = '';
     private socket: WebSocket;
@@ -18,6 +20,8 @@ export class SpotifyUser extends EventEmitter {
     constructor(public discord_id: string, private db: DB, private client_id: string, private client_secret: string) {
         super();
 
+        this.initialize = this.initialize.bind(this);
+
         for (var i = 0; i < 40; i++) {
             this.device_id += 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'.charAt(Math.floor(Math.random() * 62));
         }
@@ -25,6 +29,7 @@ export class SpotifyUser extends EventEmitter {
 
     public async initialize(): Promise<boolean> {
         if (this.initialized) return false;
+        this.destroyed = false;
 
         this.token = await this.db.getToken(this.discord_id);
         if (!this.token) {
@@ -42,7 +47,16 @@ export class SpotifyUser extends EventEmitter {
         this.socket.onmessage = this.wsOnMessage.bind(this);
         this.socket.onerror = this.wsOnError.bind(this);
 
+        this.initialized = true;
+
         return true;
+    }
+
+    public destroy() {
+        if (!this.initialized || this.destroyed) return;
+        this.destroyed = true;
+
+        this.socket.close();
     }
 
     protected wsOnOpen(event: WebSocket.OpenEvent) {
@@ -254,7 +268,18 @@ export class SpotifyUser extends EventEmitter {
     }
 
     protected wsOnClose(event: WebSocket.CloseEvent) {
-        console.log(`[INFO] WebSocket close: ${event.reason}`);
+        clearInterval(this.pingInterval);
+        this.pingInterval = null;
+        this.connection_id = null;
+
+        this.emit('playback-lost');
+
+        console.debug(`WebSocket close: ${event.reason}`);
+        this.initialized = false;
+
+        if (!this.destroyed) {
+            this.initialize();
+        }
     }
 
     protected wsOnError(event: WebSocket.ErrorEvent) {

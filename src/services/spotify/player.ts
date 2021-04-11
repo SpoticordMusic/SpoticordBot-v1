@@ -13,7 +13,7 @@ export class SpotifyPlayer extends EventEmitter {
     private manager: LavaManager;
 
     private host: SpotifyUser;
-    private players: SpotifyUser[] = [];
+    private players: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
 
     private current_spotify_track: Track;
     private current_youtube_track: LavaTrackInfo;
@@ -32,57 +32,106 @@ export class SpotifyPlayer extends EventEmitter {
             guild: this.guild_id,
             node: this.manager.idealNodes[0].id
         }, { selfdeaf: true });
-
-        this.player.on('end', this.onPlayerEnd);
+        
+        // Remove redundant onend event handlers (idk how the lavalink lib works but without the 'off' it breaks the bot after moving it)
+        this.player.off('end', this.onPlayerEnd).on('end', this.onPlayerEnd);
 
         await this.player.volume(20);
 
         const members = this.client.guilds.cache.get(this.guild_id).channels.cache.get(this.channel_id).members;
     
         for (const member of members) {
-            if (member[0] === this.client.user.id) continue;
-
-            if (!await this.db.getToken(member[0])) continue;
-            if (this.music.getUserState(member[0]) === 'ACTIVE') continue;
-
-            const spotifyUser = this.music.createUser(member[0]);
-
-            spotifyUser.on('volume', (volume) => {
-                this.onVolume(spotifyUser, volume);
-            });
-    
-            spotifyUser.on('playback-lost', () => {
-                this.onPlaybackLost(spotifyUser);
-            });
-    
-            spotifyUser.on('playback-update-pre', () => {
-                this.onPlaybackPre(spotifyUser);
-            });
-    
-            spotifyUser.on('pause-playback', (e) => {
-                this.onPausePlayback(spotifyUser, e);
-            });
-    
-            spotifyUser.on('seek-playback', (e) => {
-                this.onSeekPlayback(spotifyUser, e);
-            });
-    
-            spotifyUser.on('modify-playback', (e) => {
-                this.onModifyPlayback(spotifyUser, e);
-            });
-    
-            spotifyUser.on('play-track', (e) => {
-                this.onPlayTrack(spotifyUser, e.paused, e.position, e.track);
-            });
-
-            await spotifyUser.initialize();
+            await this.createUser(member[0]);
         }
     }
 
+    public async leave() {
+        await this.player.destroy();
+        await this.manager.leave(this.guild_id);
+
+        this.destroyAllUsers();
+    }
+
+    public async updateChannel(channel_id: string) {
+        await this.player.destroy();
+
+        this.destroyAllUsers();
+
+        this.channel_id = channel_id;
+        return await this.join();
+    }
+
+    public userLeft(user_id: string) {
+        if (this.players.has(user_id)) {
+            this.music.destroyUser(user_id);
+        }
+    }
+
+    public async userJoined(user_id: string) {
+        if (this.players.has(user_id)) return;
+
+        await this.createUser(user_id);
+    }
+
+    public getUsers() {
+        return this.players.values();
+    }
+
+    protected destroyAllUsers() {
+        this.host = null;
+        for (const player of this.players) {
+            this.music.destroyUser(player[0]);
+        }
+        this.players.clear();
+    }
+
+    protected async createUser(user_id: string) {
+        if (user_id === this.client.user.id) return;
+
+        if (!await this.db.getToken(user_id)) return;
+        if (this.music.getUserState(user_id) === 'ACTIVE') return;
+
+        const spotifyUser = this.music.createUser(user_id);
+
+        spotifyUser.removeAllListeners();
+
+        this.players.set(user_id, spotifyUser);
+
+        spotifyUser.on('volume', (volume) => {
+            this.onVolume(spotifyUser, volume);
+        });
+
+        spotifyUser.on('playback-lost', () => {
+            this.onPlaybackLost(spotifyUser);
+        });
+
+        spotifyUser.on('playback-update-pre', () => {
+            this.onPlaybackPre(spotifyUser);
+        });
+
+        spotifyUser.on('pause-playback', (e) => {
+            this.onPausePlayback(spotifyUser, e);
+        });
+
+        spotifyUser.on('seek-playback', (e) => {
+            this.onSeekPlayback(spotifyUser, e);
+        });
+
+        spotifyUser.on('modify-playback', (e) => {
+            this.onModifyPlayback(spotifyUser, e);
+        });
+
+        spotifyUser.on('play-track', (e) => {
+            this.onPlayTrack(spotifyUser, e.paused, e.position, e.track);
+        });
+
+        await spotifyUser.initialize();
+    }
+
     protected async onPlayerEnd(data: LavalinkEvent) {
-        if (data.reason === 'REPLACED') return console.debug('[REPLACED]');
-        if (data.reason === 'CLEANUP') return console.debug('[CLEANUP]');
-        if (data.reason === 'STOPPED') return console.debug('[STOPPED]');
+        if (data.reason === 'REPLACED') return;
+        if (data.reason === 'CLEANUP') return;
+        if (data.reason === 'STOPPED') return;
 
         if (!this.host || !this.player) return;
 
@@ -100,12 +149,12 @@ export class SpotifyPlayer extends EventEmitter {
     }
 
     protected async onPlaybackLost(user: SpotifyUser) {
-        this.players.splice(this.players.indexOf(user), 1);
+        this.players.delete(user.discord_id);
 
         if (this.host?.discord_id === user.discord_id) {
             this.host = null;
 
-            if (this.players.length < 1 && this.player.playing) {
+            if (this.players.size < 1 && this.player.playing) {
                 await this.player.stop();
             } else {
                 this.host = this.players[0];
@@ -116,8 +165,8 @@ export class SpotifyPlayer extends EventEmitter {
     }
 
     protected onPlaybackPre(user: SpotifyUser) {
-        if (!this.players.includes(user)) {
-            this.players.push(user);
+        if (!this.players.has(user.discord_id)) {
+            this.players.set(user.discord_id, user);
         }
 
         if (!this.host) {
@@ -158,10 +207,19 @@ export class SpotifyPlayer extends EventEmitter {
             const search = `${track.metadata.authors.map((author_name) => author_name.name).join(', ')} - ${track.metadata.name}`;
             const query = `ytsearch:${search}`;
 
-            const track_list = await this.manager.getSongs(query);
+            let track_list: LavaTrackInfo[];
+
+            for (var i = 0; i < 3; i++) {
+                track_list = await this.manager.getSongs(query);
+
+                if (track_list.length > 0) break;
+            }
 
             if (track_list.length < 1) {
                 console.debug(`No track found for ${search}`);
+
+                await user.advanceNext();
+
                 return;
             }
 

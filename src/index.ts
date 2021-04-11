@@ -86,7 +86,7 @@ client.on('ready', async () => {
 
     console.log(`[INFO] Initialization completed`);
 
-    const player = await musicService.joinChannel('805838054447120384', '805838054895517699');
+    const player = await musicService.joinChannel('779292533053456404', '782402647654268930');
 });
 
 client.on('guildCreate', (guild) => {
