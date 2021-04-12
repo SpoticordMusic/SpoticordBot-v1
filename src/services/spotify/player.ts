@@ -77,6 +77,14 @@ export class SpotifyPlayer extends EventEmitter {
         return this.players.values();
     }
 
+    public getHost(): SpotifyUser | null {
+        return this.host;
+    }
+
+    public getTrackInfo(): [Track, LavaTrackInfo] {
+        return [this.current_spotify_track, this.current_youtube_track];
+    }
+
     protected destroyAllUsers() {
         this.host = null;
         for (const player of this.players) {

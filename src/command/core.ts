@@ -1,5 +1,13 @@
 import { MessageEmbed } from "discord.js";
+import MusicPlayerService from "../services/music";
 import { CommandEvent } from "./emitter";
+
+// TODO: Fix this shit ass way of passing the Music Player Service to the command handlers
+var music: MusicPlayerService;
+
+export function initialize(music_service: MusicPlayerService) {
+    music = music_service;
+}
 
 export async function link(event: CommandEvent) {
     const link_url = event.config.get('spotify_link_url') || 'http://localhost:4481/link/';
@@ -39,6 +47,8 @@ export async function unlink(event: CommandEvent) {
 
         return;
     }
+
+    music.destroyUser(event.msg.author.id);
 
     await event.db.deleteToken(event.msg.author.id);
 

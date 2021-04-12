@@ -7,3 +7,6 @@ db.json
 
 # Configuration files
 config.json
+
+# VSCode
+.vscode/

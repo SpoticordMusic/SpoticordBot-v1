@@ -4,6 +4,7 @@ import assert from 'assert';
 
 import { CommandEmitter } from './command/emitter';
 import * as core from './command/core';
+import * as music from './command/music';
 import { DB } from './db';
 //import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
@@ -46,14 +47,21 @@ client.on('ready', async () => {
     });
 
     // Add command handlers
+
+    core.initialize(musicService);
     cmdEmitter.addCommandHandler('link', core.link);
     cmdEmitter.addCommandHandler('unlink', core.unlink);
     cmdEmitter.addCommandHandler('rename', core.rename, 'name');
     cmdEmitter.addCommandHandler('help', core.help, 'h');
 
+    music.initialize(musicService);
+    cmdEmitter.addCommandHandler('join', music.join);
+    cmdEmitter.addCommandHandler('leave', music.leave, 'dc', 'kick', 'disconnect');
+    cmdEmitter.addCommandHandler('playing', music.playing, 'nowplaying', 'np');
+
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 
-    const nodes = [{ id: 'default', host: 'localhost', port: 2333, password: '12345' }];
+    const nodes = [{ id: 'default', host: 'localhost', port: 2333, password: 'youshallnotpass' }];
 
     const manager = new LavaManager(client, nodes, {
         user: client.user.id,
@@ -80,13 +88,11 @@ client.on('ready', async () => {
     console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
 
     // I have not yet figured out a way to validate the client id and client secret without 
-    //  performing a oauth authorization grant, so this function won't check if these parameters are valid
+    //  performing an oauth authorization grant, so this function won't check if these parameters are valid
     musicService.initialize(manager);
     SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
 
     console.log(`[INFO] Initialization completed`);
-
-    const player = await musicService.joinChannel('779292533053456404', '782402647654268930');
 });
 
 client.on('guildCreate', (guild) => {
