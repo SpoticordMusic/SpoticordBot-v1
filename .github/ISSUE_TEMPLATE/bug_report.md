@@ -23,5 +23,8 @@ A clear and concise description of what you expected to happen.
 **Screenshots/Video**
 If applicable, add screenshots and/or a short video to help explain your problem.
 
+**Logs (only when using open source)**
+If applicable, add the log output that might contain more information or help explain your problem.
+
 **Additional context**
 Add any other context about the problem here.

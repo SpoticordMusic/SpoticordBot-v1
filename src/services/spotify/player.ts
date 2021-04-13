@@ -190,6 +190,12 @@ export class SpotifyPlayer extends EventEmitter {
         if (this.host?.discord_id === user.discord_id) {
             await this.player.pause(e.paused);
 
+            for (const player of this.players) {
+                if (player[1].discord_id === this.host.discord_id) continue;
+
+                await (e.paused ? player[1].pausePlayback() : player[1].resumePlayback());
+            }
+
             console.debug(`pause-playback = ${e.paused}`);
         }
     }
@@ -199,6 +205,12 @@ export class SpotifyPlayer extends EventEmitter {
 
         if (this.host?.discord_id === user.discord_id) {
             await this.player.seek(this.spotify_to_yt(e.position));
+
+            for (const player of this.players) {
+                if (player[1].discord_id === this.host.discord_id) continue;
+
+                await player[1].seekPlayback(e.position);
+            }
 
             console.debug(`seek-playback = ${e.position}`);
         }
@@ -234,6 +246,12 @@ export class SpotifyPlayer extends EventEmitter {
             this.current_youtube_track = track_list[0];
             this.current_spotify_track = track;
 
+            for (const player of this.players) {
+                if (player[1].discord_id === this.host.discord_id) continue;
+
+                await player[1].playTrack(this.current_spotify_track.metadata.uri, position);
+            }
+
             console.debug(`play-track = paused = ${paused}, position = ${position}, name = ${search}`);
 
             await this.player.play(track_list[0].track, {pause: paused, startTime: this.spotify_to_yt(position)});
@@ -241,10 +259,10 @@ export class SpotifyPlayer extends EventEmitter {
     }
 
     protected spotify_to_yt(position: number): number {
-        return (position / this.current_spotify_track.metadata.duration) * this.current_youtube_track.info.length;
+        return (position / this.current_spotify_track?.metadata.duration) * this.current_youtube_track?.info.length;
     }
 
     protected yt_to_spotify(position: number): number {
-        return (position / this.current_youtube_track.info.length) * this.current_spotify_track.metadata.duration;
+        return (position / this.current_youtube_track?.info.length) * this.current_spotify_track?.metadata.duration;
     }
 }

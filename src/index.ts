@@ -61,7 +61,7 @@ client.on('ready', async () => {
 
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 
-    const nodes = [{ id: 'default', host: 'localhost', port: 2333, password: 'youshallnotpass' }];
+    const nodes = conf.get('nodes');
 
     const manager = new LavaManager(client, nodes, {
         user: client.user.id,

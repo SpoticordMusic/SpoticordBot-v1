@@ -20,12 +20,12 @@ export default class LinkerService {
         this.app = express();
         this.dbEngine = dbEngine;
         
-        this.app.get('/link/:token', this.onLinkPage);
-        this.app.get('/link', this.onGrantPage);
+        this.app.get('/:token', this.onLinkPage);
+        this.app.get('/', this.onGrantPage);
 
         this.client_id = config.get('spotify_client_id');
         this.client_secret = config.get('spotify_client_secret');
-        this.redir_url = config.get('spotify_redirect_url') || 'http://localhost:4481/link';
+        this.redir_url = config.get('spotify_redirect_url') || 'http://localhost:4481/';
 
         return new Promise((resolve) => {
             try {

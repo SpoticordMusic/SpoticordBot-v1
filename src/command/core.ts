@@ -95,11 +95,18 @@ export async function help(event: CommandEvent) {
     }));
 }
 
+// Use constants instead of reinitializing regex: https://github.com/SpoticordMusic/Spoticord/issues/2
+const RX_SLASH = /\\/g;
+const RX_WILDCARD = /\*/g;
+const RX_UNDERSCORE = /\_/g;
+const RX_TILDE = /\~/g;
+const RX_COMMA = /\`/g;
+
 function _dc_escape(text: string): string {
     return text
-        .replace(/\\\\/g, '\\\\')
-        .replace(/\*/g, '\\*')
-        .replace(/\_/g, '\\_')
-        .replace(/\~/g, '\\~')
-        .replace(/\`/g, '\\`');
+        .replace(RX_SLASH, '\\\\')
+        .replace(RX_WILDCARD, '\\*')
+        .replace(RX_UNDERSCORE, '\\_')
+        .replace(RX_TILDE, '\\~')
+        .replace(RX_COMMA, '\\`');
 }

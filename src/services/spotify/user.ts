@@ -266,6 +266,36 @@ export class SpotifyUser extends EventEmitter {
         });
     }
 
+    public async playTrack(track_uri: string, position: number): Promise<boolean> {
+        if (!this.initialized || this.destroyed) return false;
+
+        return await this.state_manager.playTrackUri(track_uri, position);
+    }
+
+    public async playAlbum(album_uri: string, offset: number, position: number): Promise<boolean> {
+        if (!this.initialized || this.destroyed) return false;
+
+        return await this.state_manager.playAlbumUri(album_uri, offset, position);
+    }
+
+    public async seekPlayback(position: number): Promise<boolean> {
+        if (!this.initialized || this.destroyed) return false;
+
+        return await this.state_manager.seekTo(position);
+    }
+
+    public async pausePlayback(): Promise<boolean> {
+        if (!this.initialized || this.destroyed) return false;
+
+        return await this.state_manager.pausePlayback();
+    }
+
+    public async resumePlayback(): Promise<boolean> {
+        if (!this.initialized || this.destroyed) return false;
+        
+        return await this.state_manager.resumePlayback();
+    }
+
     protected wsOnClose(event: WebSocket.CloseEvent) {
         clearInterval(this.pingInterval);
         this.pingInterval = null;

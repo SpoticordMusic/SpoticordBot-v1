@@ -15,6 +15,13 @@ export default class ConfigManager {
 
             assert(this.config.has('spotify_client_id'), 'Missing field: spotify_client_id');
             assert(this.config.has('spotify_client_secret'), 'Missing field: spotify_client_secret');
+
+            assert(this.config.has('nodes'), 'Missing field: nodes');
+
+            const nodes = this.config.get('nodes');
+
+            assert(Array.isArray(nodes), 'Dirty field: nodes');
+            assert(nodes.length, 'Dirty field: nodes');
         } catch (ex) {
             this.dirty = ex;
             return;

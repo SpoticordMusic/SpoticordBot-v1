@@ -197,6 +197,184 @@ export class SpotifyStateManager {
         return true;
     }
 
+    public async playTrackUri(track_uri: string, position: number): Promise<boolean> {
+        let response = await axios.put('https://api.spotify.com/v1/me/player/play', {
+            uris: [track_uri],
+            position_ms: position
+        }, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/play] failed');
+                return false;
+            }
+
+            response = await axios.put('https://api.spotify.com/v1/me/player/play', {
+                uris: [track_uri],
+                position_ms: position
+            }, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/play failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public async seekTo(position: number): Promise<boolean> {
+        let response = await axios.put(`https://api.spotify.com/v1/me/player/seek?position_ms=${position}`, {}, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/seek] failed');
+                return false;
+            }
+
+            response = await axios.put(`https://api.spotify.com/v1/me/player/seek?position_ms=${position}`, {}, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/seek failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public async pausePlayback(): Promise<boolean> {
+        let response = await axios.put('https://api.spotify.com/v1/me/player/pause', {}, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/pause] failed');
+                return false;
+            }
+
+            response = await axios.put('https://api.spotify.com/v1/me/player/pause', {}, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/pause failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public async resumePlayback(): Promise<boolean> {
+        let response = await axios.put('https://api.spotify.com/v1/me/player/play', {}, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/play[resume]] failed');
+                return false;
+            }
+
+            response = await axios.put('https://api.spotify.com/v1/me/player/play', {}, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/play[resume] failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public async playAlbumUri(album_uri: string, offset: number, position: number): Promise<boolean> {
+        let response = await axios.put('https://api.spotify.com/v1/me/player/play', {
+            context_uri: album_uri,
+            offset: {
+                position: offset
+            },
+            position_ms: position
+        }, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/play[album]] failed');
+                return false;
+            }
+
+            response = await axios.put('https://api.spotify.com/v1/me/player/play', {
+                context_uri: album_uri,
+                offset: {
+                    position: offset
+                },
+                position_ms: position
+            }, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/play[album] failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public async emitPaused(position: number, paused: boolean): Promise<boolean> {
         const payload = {
             seq_num: ++this.seq,

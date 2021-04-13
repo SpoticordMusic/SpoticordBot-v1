@@ -4,7 +4,9 @@
   "description": "Spoticord Music Bot",
   "main": "build/index.js",
   "scripts": {
-    "compile": "tsc && node ."
+    "build": "tsc",
+    "compile": "tsc && node .",
+    "start": "node ."
   },
   "repository": {
     "type": "git",
