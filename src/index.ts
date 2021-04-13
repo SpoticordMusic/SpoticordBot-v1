@@ -43,7 +43,7 @@ const linkerService = new LinkerService();
 client.on('ready', async () => {
 
     await client.user.setActivity({
-        name: 'EXPERIMENTAL: Report bugs ASAP'
+        name: 'Spotify songs 🤪'
     });
 
     // Add command handlers

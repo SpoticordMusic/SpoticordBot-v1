@@ -10,7 +10,7 @@ export function initialize(music_service: MusicPlayerService) {
 }
 
 export async function link(event: CommandEvent) {
-    const link_url = event.config.get('spotify_link_url') || 'http://localhost:4481/link/';
+    const link_url = event.config.get('spotify_link_url') || 'http://localhost:4481/';
 
     if (await event.db.getToken(event.msg.author.id)) {
         await event.send(new MessageEmbed({
