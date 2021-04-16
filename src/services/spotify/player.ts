@@ -18,17 +18,25 @@ export class SpotifyPlayer extends EventEmitter {
     private current_spotify_track: Track;
     private current_youtube_track: LavaTrackInfo;
 
-    constructor(public guild_id: string, public channel_id: string, public client: Client, public music: MusicPlayerService, private db: DB) {
+    private player_leave_timeout: NodeJS.Timeout;
+    private should_kick: boolean = false; // Indicates wether the bot SHOULD have been kicked, but was NOT kicked because of certain criteria
+
+    private is_247: boolean = false;
+
+    constructor(public guild_id: string, public voice_channel: string, public text_channel: string, public client: Client, public music: MusicPlayerService, private db: DB) {
         super();
 
         this.onPlayerEnd = this.onPlayerEnd.bind(this);
+
+        this.startPlayerKickTimeout = this.startPlayerKickTimeout.bind(this);
+        this.stopPlayerKickTimeout = this.stopPlayerKickTimeout.bind(this);
 
         this.manager = music.getLavaManager();
     }
 
     public async join() {
         this.player = await this.manager.join({
-            channel: this.channel_id,
+            channel: this.voice_channel,
             guild: this.guild_id,
             node: this.manager.idealNodes[0].id
         }, { selfdeaf: true });
@@ -38,17 +46,20 @@ export class SpotifyPlayer extends EventEmitter {
 
         await this.player.volume(20);
 
-        const members = this.client.guilds.cache.get(this.guild_id).channels.cache.get(this.channel_id).members;
+        const members = this.client.guilds.cache.get(this.guild_id).channels.cache.get(this.voice_channel).members;
     
         for (const member of members) {
             await this.createUser(member[0]);
         }
+
+        this.updatePlayerKickTimeout();
     }
 
     public async leave() {
         await this.player.destroy();
         await this.manager.leave(this.guild_id);
 
+        this.stopPlayerKickTimeout();
         this.destroyAllUsers();
     }
 
@@ -57,7 +68,7 @@ export class SpotifyPlayer extends EventEmitter {
 
         this.destroyAllUsers();
 
-        this.channel_id = channel_id;
+        this.voice_channel = channel_id;
         return await this.join();
     }
 
@@ -65,12 +76,26 @@ export class SpotifyPlayer extends EventEmitter {
         if (this.players.has(user_id)) {
             this.music.destroyUser(user_id);
         }
+
+        if (!this.is_247 && this.client.guilds.cache.get(this.guild_id).channels.cache.get(this.voice_channel).members.size != 2) {
+            this.updatePlayerKickTimeout();
+        }
     }
 
     public async userJoined(user_id: string) {
         if (this.players.has(user_id)) return;
 
         await this.createUser(user_id);
+
+        this.updatePlayerKickTimeout();
+    }
+
+    public toggle247(): boolean {
+        this.is_247 = !this.is_247;
+
+        this.updatePlayerKickTimeout();
+
+        return this.is_247
     }
 
     public getUsers() {
@@ -164,6 +189,8 @@ export class SpotifyPlayer extends EventEmitter {
 
             if (this.players.size < 1 && this.player.playing) {
                 await this.player.stop();
+
+                this.startPlayerKickTimeout();
             } else {
                 this.host = this.players[0];
             }
@@ -195,6 +222,9 @@ export class SpotifyPlayer extends EventEmitter {
 
                 await (e.paused ? player[1].pausePlayback() : player[1].resumePlayback());
             }
+
+            if (e.paused) this.startPlayerKickTimeout();
+            else this.stopPlayerKickTimeout();
 
             console.debug(`pause-playback = ${e.paused}`);
         }
@@ -252,6 +282,9 @@ export class SpotifyPlayer extends EventEmitter {
                 await player[1].playTrack(this.current_spotify_track.metadata.uri, position);
             }
 
+            if (!paused) this.stopPlayerKickTimeout();
+            else if (!this.player_leave_timeout) this.startPlayerKickTimeout();
+
             console.debug(`play-track = paused = ${paused}, position = ${position}, name = ${search}`);
 
             await this.player.play(track_list[0].track, {pause: paused, startTime: this.spotify_to_yt(position)});
@@ -264,5 +297,39 @@ export class SpotifyPlayer extends EventEmitter {
 
     protected yt_to_spotify(position: number): number {
         return (position / this.current_youtube_track?.info.length) * this.current_spotify_track?.metadata.duration;
+    }
+
+    // Triggers when the "do not kick" criteria no applies
+    protected updatePlayerKickTimeout() {
+        if (this.is_247 || this.client.guilds.cache.get(this.guild_id).channels.cache.get(this.voice_channel).members.size == 2) {
+            this.stopPlayerKickTimeout();
+        } else {
+            this.startPlayerKickTimeout();
+        }
+    }
+
+    protected startPlayerKickTimeout() {
+        if (this.player_leave_timeout) {
+            clearTimeout(this.player_leave_timeout);
+        }
+
+        this.player_leave_timeout = setTimeout((() => {
+            if (this.client.guilds.cache.get(this.guild_id).channels.cache.get(this.voice_channel).members.size == 2)
+                return;
+
+            if (this.is_247)
+                return;
+
+            this.music.leaveGuild(this.guild_id, true);
+        }).bind(this), 5 * 60 * 1000);
+    }
+
+    protected stopPlayerKickTimeout() {
+        this.should_kick = false;
+ 
+        if (!this.player_leave_timeout) return;
+
+        clearTimeout(this.player_leave_timeout);
+        this.player_leave_timeout = null;
     }
 }

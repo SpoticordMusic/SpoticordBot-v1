@@ -7,6 +7,7 @@ export default class MusicCommands {
         this.join = this.join.bind(this);
         this.leave = this.leave.bind(this);
         this.playing = this.playing.bind(this);
+        this.stay = this.stay.bind(this);
     }
 
     async join(event: CommandEvent) {
@@ -38,7 +39,7 @@ export default class MusicCommands {
         }
     
         if (this.music.getPlayerState(event.msg.guild.id) === 'DISCONNECTED') {
-            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channelID);
+            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channelID, event.msg.channel.id);
     
             return await event.send(new MessageEmbed({
                 description: `Come listen along in <#${event.msg.member.voice.channelID}>`,
@@ -58,7 +59,7 @@ export default class MusicCommands {
     
         if (!this.music.getPlayerHost(event.msg.guild.id)) {
             await this.music.leaveGuild(event.msg.guild.id);
-            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channelID);
+            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channelID, event.msg.channel.id);
     
             return await event.send(new MessageEmbed({
                 description: `Come listen along in <#${event.msg.member.voice.channelID}>`,
@@ -131,6 +132,23 @@ export default class MusicCommands {
             description: `Click **[here](${youtube_track.info.uri})** for the YouTube version`,
             footer: dcUser ? {text: `${dcUser.username}`, icon_url: dcUser.avatarURL()} : undefined,
             color: '#0773d6'
+        }));
+    }
+
+    async stay(event: CommandEvent) {
+        if (this.music.getPlayerState(event.msg.guild.id) === 'DISCONNECTED') {
+            return await event.send(new MessageEmbed({
+                description: 'The bot is currently not connected to any voice channel',
+                author: {name: 'Cannot get track info', icon_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png'},
+                color: '#d61516'
+            }));
+        }
+
+        const isEnabled = this.music.toggle247(event.msg.guild.id);
+
+        return await event.send(new MessageEmbed({
+            description: isEnabled ? 'The bot will stay in this call indefinitely' : 'The bot will leave the call if it\'s been inactive for too long',
+            author: {name: `${isEnabled ? 'Enabled' : 'Disabled'} 24/7 mode`}
         }));
     }
 }

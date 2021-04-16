@@ -60,6 +60,7 @@ client.on('ready', async () => {
     cmdEmitter.addCommandHandler('join', music.join);
     cmdEmitter.addCommandHandler('leave', music.leave, 'dc', 'kick', 'disconnect');
     cmdEmitter.addCommandHandler('playing', music.playing, 'nowplaying', 'np');
+    cmdEmitter.addCommandHandler('24/7', music.stay, 'stay');
 
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 

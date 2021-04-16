@@ -1,4 +1,4 @@
-import { Client, User, VoiceState } from "discord.js";
+import { Client, MessageEmbed, TextChannel, User, VoiceState } from "discord.js";
 import ConfigManager from "../config";
 import { DB } from "../db";
 import { LavaManager, LavaTrackInfo } from "./lava";
@@ -48,15 +48,8 @@ export default class MusicPlayerService {
                 }
             } else if (oldState.channelID && newState.channelID && oldState.channelID !== newState.channelID) {
                 // Bot MOVED voice channel
-                if (!this.players.has(oldState.guild.id)) {
-                    const player = new SpotifyPlayer(newState.guild.id, newState.channelID, this.client, this, this.db);
-
-                    this.players.set(newState.guild.id, player);
-
-                    await player.join();
-                } else {
-                    await this.players.get(newState.guild.id).updateChannel(newState.channelID);
-                }
+                
+                await this.players.get(newState.guild.id).updateChannel(newState.channelID);
             }
 
             return;
@@ -65,7 +58,7 @@ export default class MusicPlayerService {
         if (this.players.has(oldState.guild.id)) { // Old state was in a guild where music is playing
             const player = this.players.get(oldState.guild.id);
 
-            if (player.channel_id === oldState.channelID && player.channel_id !== newState.channelID) { // User got out of channel with bot
+            if (player.voice_channel === oldState.channelID && player.voice_channel !== newState.channelID) { // User got out of channel with bot
                 player.userLeft(oldState.id);
             }
         }
@@ -73,7 +66,7 @@ export default class MusicPlayerService {
         if (this.players.has(newState.guild.id)) {
             const player = this.players.get(newState.guild.id);
 
-            if (player.channel_id === newState.channelID && player.channel_id !== oldState.channelID) {
+            if (player.voice_channel === newState.channelID && player.voice_channel !== oldState.channelID) {
                 await player.userJoined(newState.id);
             }
         }
@@ -92,7 +85,7 @@ export default class MusicPlayerService {
     public getPlayerChannel(guild_id: string): string | null {
         if (!this.players.has(guild_id)) return null;
 
-        return this.players.get(guild_id).channel_id;
+        return this.players.get(guild_id).voice_channel;
     }
 
     public getPlayerHost(guild_id: string): SpotifyUser | null {
@@ -103,6 +96,13 @@ export default class MusicPlayerService {
 
     public getUserState(user_id: string): UserState {
         return this.users.has(user_id) ? 'ACTIVE' : 'INACTIVE';
+    }
+
+    public toggle247(guild_id: string): boolean {
+        if (!this.players.has(guild_id)) return false;
+
+        const player = this.players.get(guild_id);
+        return player.toggle247();
     }
 
     public async playerUserJoin(guild_id: string, user_id: string) {
@@ -132,10 +132,10 @@ export default class MusicPlayerService {
         this.users.delete(user_id);
     }
 
-    public async joinChannel(guild_id: string, channel_id: string): Promise<SpotifyPlayer> {
+    public async joinChannel(guild_id: string, voice_channel: string, text_channel: string): Promise<SpotifyPlayer> {
         if (this.players.has(guild_id)) return this.players.get(guild_id);
 
-        const player = new SpotifyPlayer(guild_id, channel_id, this.client, this, this.db);
+        const player = new SpotifyPlayer(guild_id, voice_channel, text_channel, this.client, this, this.db);
 
         await player.join();
 
@@ -144,7 +144,7 @@ export default class MusicPlayerService {
         return player;
     }
 
-    public async leaveGuild(guild_id: string) {
+    public async leaveGuild(guild_id: string, afk: boolean = false) {
         if (!this.players.has(guild_id)) return;
 
         // Prevent race condition with the onVoiceStateUpdate cb
@@ -154,6 +154,14 @@ export default class MusicPlayerService {
         await player.leave();
 
         this.players.delete(guild_id);
+
+        if (afk) {
+            await (<TextChannel>this.client.guilds.cache.get(player.guild_id).channels.cache.get(player.text_channel)).send(new MessageEmbed({
+                description: 'I left the voice channel because of inactivity',
+                author: {name: 'Left voice channel'},
+                color: '#d61516'
+            }));
+        }
     }
 
     public getTrackInfo(guild_id: string): [Track, LavaTrackInfo] | null {
