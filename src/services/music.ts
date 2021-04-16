@@ -65,7 +65,7 @@ export default class MusicPlayerService {
         if (this.players.has(oldState.guild.id)) { // Old state was in a guild where music is playing
             const player = this.players.get(oldState.guild.id);
 
-            if (player.channel_id === oldState.channelID) { // User got out of channel with bot
+            if (player.channel_id === oldState.channelID && player.channel_id !== newState.channelID) { // User got out of channel with bot
                 player.userLeft(oldState.id);
             }
         }
@@ -73,7 +73,7 @@ export default class MusicPlayerService {
         if (this.players.has(newState.guild.id)) {
             const player = this.players.get(newState.guild.id);
 
-            if (player.channel_id === newState.channelID) {
+            if (player.channel_id === newState.channelID && player.channel_id !== oldState.channelID) {
                 await player.userJoined(newState.id);
             }
         }
