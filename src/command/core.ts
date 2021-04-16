@@ -9,7 +9,12 @@ const RX_TILDE = /\~/g;
 const RX_COMMA = /\`/g;
 
 export default class CoreCommands {
-    constructor(private music: MusicPlayerService) {}
+    constructor(private music: MusicPlayerService) {
+        this.link = this.link.bind(this);
+        this.unlink = this.unlink.bind(this);
+        this.help = this.help.bind(this);
+        this.rename = this.rename.bind(this);
+    }
     
     async link(event: CommandEvent) {
         const link_url = event.config.get('spotify_redirect_url') || 'http://localhost:4481/';

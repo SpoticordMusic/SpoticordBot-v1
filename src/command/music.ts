@@ -3,7 +3,11 @@ import MusicPlayerService from "../services/music";
 import { CommandEvent } from "./emitter";
 
 export default class MusicCommands {
-    constructor(private music: MusicPlayerService) {}
+    constructor(private music: MusicPlayerService) {
+        this.join = this.join.bind(this);
+        this.leave = this.leave.bind(this);
+        this.playing = this.playing.bind(this);
+    }
 
     async join(event: CommandEvent) {
         if (!event.msg.member.voice.channel) {
