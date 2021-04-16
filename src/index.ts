@@ -103,6 +103,11 @@ client.on('guildDelete', (guild) => {
     console.log(`[INFO] Left guild "${guild.name}"`);
 });
 
+client.on('error', (error) => {
+    console.error('[DISCORD ERROR]');
+    console.error(error);
+});
+
 client.on('message', (msg) => {
     if (!msg.guild) return;
     if (!msg.content.startsWith(conf.get('prefix'))) return;
