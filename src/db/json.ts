@@ -4,9 +4,11 @@ import { DB, DBRequest, DBToken } from ".";
 export default class JSONPoweredDB implements DB {
     private db: JsonDB;
 
+    constructor(private filename: string) {}
+
     async initialize(): Promise<boolean> {
         try {
-            this.db = new JsonDB('db', true, false, '/');
+            this.db = new JsonDB(this.filename, true, false, '/');
         } catch {
             return false;
         }

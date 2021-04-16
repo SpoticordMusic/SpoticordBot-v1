@@ -6,7 +6,7 @@ import { CommandEmitter } from './command/emitter';
 import * as core from './command/core';
 import * as music from './command/music';
 import { DB } from './db';
-//import MongoPoweredDB from './db/mongo';
+import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
 import { LavaManager } from './services/lava';
 import ConfigManager from './config';
@@ -34,8 +34,10 @@ if (conf.getDirty()) {
     assert(false, conf.getDirty());
 }
 
+const dbConfig = conf.get('database');
+
 const client = new Discord.Client();
-const dbEngine: DB = new JSONPoweredDB();
+const dbEngine: DB = dbConfig.strategy === 'mongo' ? new MongoPoweredDB(`mongodb://${dbConfig.username}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/`, dbConfig.db) : new JSONPoweredDB(dbConfig.filename);
 const cmdEmitter = new CommandEmitter(conf, dbEngine);
 const musicService = new MusicPlayerService(conf, client, dbEngine);
 const linkerService = new LinkerService();

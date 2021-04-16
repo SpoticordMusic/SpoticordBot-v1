@@ -10,6 +10,10 @@
         "password": "youshallnotpass"
     }],
     
+    "database": {
+        "strategy": "json",
+        "filename": "db"
+    },
     "linker_hostname": "0.0.0.0",
     "linker_port": 42612,
     "spotify_redirect_url": "http://myepicwebsite.lol/link"

@@ -14,6 +14,7 @@
   * [Why open source?](#why-open-source)
 * [Setting Up](#setting-up)
   * [The config.json file](#the-configjson-file)
+  * [Setting up a database](#setting-up-a-database)
   * [Setting up Lavalink](#setting-up-lavalink)
   * [Setting up a Discord application](#setting-up-a-discord-application)
   * [Setting up a Spotify application](#setting-up-a-spotify-application)
@@ -62,11 +63,42 @@ You can find an example `config.example.json` file at the root of the repo. This
 | token                 | **Yes**  | N/A                      | The Discord bot token
 | spotify_client_id     | **Yes**  | N/A                      | The Spotify client ID
 | spotify_client_secret | **Yes**  | N/A                      | The Spotify client secret
-| nodes                 | **Yes**  | N/A                      | An array of objects containing lavalink Nodes (id: string, host: string, port: number, password: string
+| nodes                 | **Yes**  | N/A                      | An array of objects containing lavalink Nodes (id: string, host: string, port: number, password: string)
+| database              | No       | JsonDB at ./db.json      | [Setting up a database](#setting-up-a-database)
 | linker_hostname       | No       | '127.0.0.1'              | The hostname the linker website will listen on
 | linker_port           | No       | 4481                     | The port number the linker website will listen on
 | spotify_redirect_url  | No       | 'http://localhost:4481/' | The redirect url for the Spotify OAuth procedure
 
+## Setting up a database
+Spoticord currently supports two strategies of storing data: `json` and `mongo`. Using json is easier but can become hard to manage. Instead you might want to set up a MongoDB server. To choose which strategy you want to use, you will have to add a new `database` field to the `config.json` file. If no `database` field is supplied then Spoticord will automatically use the `json` strategy in the file `$PROJECT_ROOT/db.json`.
+
+#### JSON strategy example
+```json
+{
+  ...,
+  "database": {
+    "strategy": "json",
+    "filename": "/etc/spoticord/db.json"
+  },
+  ...
+}
+```
+
+#### MongoDB strategy example
+```json
+{
+  ...,
+  "database": {
+    "strategy": "mongo",
+    "username": "admin",
+    "password": "admin",
+    "host": "mongo.myepicdomainname.com",
+    "port": 27017,
+    "db": "spoticord"
+  }
+  ...
+}
+```
 
 ## Setting up Lavalink
 You can download Lavalink from [the official releases page](https://github.com/freyacodes/Lavalink/releases/). Make sure to download the most up-to-date version to get better speed and stability.

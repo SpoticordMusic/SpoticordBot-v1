@@ -16,6 +16,22 @@ export default class ConfigManager {
             assert(this.config.has('spotify_client_id'), 'Missing field: spotify_client_id');
             assert(this.config.has('spotify_client_secret'), 'Missing field: spotify_client_secret');
 
+            if (this.config.has('database')) {
+                const db = this.config.get('database');
+                assert(typeof db === 'object', 'Dirty field: database');
+                assert(!(db.strategy === 'json' && !db.filename), 'Dirty field: database.filename (required when strategy == "json")');
+                assert(!(db.strategy === 'mongo' && !db.username), 'Dirty field: database.username (required when strategy == "mongo")');
+                assert(!(db.strategy === 'mongo' && !db.password), 'Dirty field: database.password (required when strategy == "mongo")');
+                assert(!(db.strategy === 'mongo' && !db.host), 'Dirty field: database.host (required when strategy == "mongo")');
+                assert(!(db.strategy === 'mongo' && !db.port), 'Dirty field: database.port (required when strategy == "mongo")');
+                assert(!(db.strategy === 'mongo' && !db.db), 'Dirty field: database.db (required when strategy == "mongo")');
+            } else {
+                this.config.set('database', {
+                    strategy: 'json',
+                    filename: 'db'
+                });
+            }
+
             assert(this.config.has('nodes'), 'Missing field: nodes');
 
             const nodes = this.config.get('nodes');
