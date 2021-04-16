@@ -3,8 +3,8 @@ import * as Discord from 'discord.js';
 import assert from 'assert';
 
 import { CommandEmitter } from './command/emitter';
-import * as core from './command/core';
-import * as music from './command/music';
+import CoreCommands from './command/core';
+import MusicCommands from './command/music';
 import { DB } from './db';
 import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
@@ -50,13 +50,13 @@ client.on('ready', async () => {
 
     // Add command handlers
 
-    core.initialize(musicService);
+    const core = new CoreCommands(musicService);
     cmdEmitter.addCommandHandler('link', core.link);
     cmdEmitter.addCommandHandler('unlink', core.unlink);
     cmdEmitter.addCommandHandler('rename', core.rename, 'name');
     cmdEmitter.addCommandHandler('help', core.help, 'h');
 
-    music.initialize(musicService);
+    const music = new MusicCommands(musicService);
     cmdEmitter.addCommandHandler('join', music.join);
     cmdEmitter.addCommandHandler('leave', music.leave, 'dc', 'kick', 'disconnect');
     cmdEmitter.addCommandHandler('playing', music.playing, 'nowplaying', 'np');
