@@ -156,11 +156,13 @@ export default class MusicPlayerService {
         this.players.delete(guild_id);
 
         if (afk) {
-            await (<TextChannel>this.client.guilds.cache.get(player.guild_id).channels.cache.get(player.text_channel)).send(new MessageEmbed({
-                description: 'I left the voice channel because of inactivity',
-                author: {name: 'Left voice channel'},
-                color: '#d61516'
-            }));
+            try {
+                await (<TextChannel>this.client.guilds.cache.get(player.guild_id).channels.cache.get(player.text_channel)).send(new MessageEmbed({
+                    description: 'I left the voice channel because of inactivity',
+                    author: {name: 'Left voice channel'},
+                    color: '#d61516'
+                }));
+            } catch (ex) {}
         }
     }
 
