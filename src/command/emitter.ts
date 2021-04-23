@@ -42,7 +42,16 @@ export class CommandEmitter extends EventEmitter {
     }
 
     public emit(event: string | symbol, args: string[], msg: Discord.Message, v?: object): boolean {
+        const botPerms = msg.guild.member(msg.client.user).permissionsIn(msg.channel);
+        if (!botPerms.has('VIEW_CHANNEL') || !botPerms.has('SEND_MESSAGES')) {
+            return false;
+        }
 
+        if (!botPerms.has('EMBED_LINKS')) {
+            msg.channel.send('I require the `EMBED_LINKS` permission to be able to respond to commands.').catch(() => {});
+            return false;
+        }
+        
         var obj: CommandEvent = {
             reply: null, 
             send: null,
