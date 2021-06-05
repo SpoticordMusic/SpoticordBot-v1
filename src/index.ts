@@ -146,4 +146,5 @@ dbEngine.initialize().then((success) => {
 process.on('SIGINT', () => {
     console.log('[SIGINT] Shutting down...');
     client.destroy();
+    setTimeout(process.exit, 5000);
 });
