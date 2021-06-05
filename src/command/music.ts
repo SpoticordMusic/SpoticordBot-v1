@@ -1,4 +1,4 @@
-import { MessageEmbed } from "discord.js";
+import { MessageEmbed, TextChannel } from "discord.js";
 import MusicPlayerService from "../services/music";
 import { CommandEvent } from "./emitter";
 
@@ -37,9 +37,18 @@ export default class MusicCommands {
                 color: '#D61516'
             }));
         }
+
+        // Check if user is already using bot in another guild
+        if (this.music.getUserState(event.msg.author.id) === 'ACTIVE') {
+            return await event.send(new MessageEmbed({
+                description: 'Spoticord is already active on your Discord account somewhere else',
+                author: { name: 'Cannot join voice channel', icon_url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png' },
+                color: '#D61516'
+            }))
+        }
     
         if (this.music.getPlayerState(event.msg.guild.id) === 'DISCONNECTED') {
-            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channelID, event.msg.channel.id);
+            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channel, <TextChannel>event.msg.channel);
     
             return await event.send(new MessageEmbed({
                 description: `Come listen along in <#${event.msg.member.voice.channelID}>`,
@@ -48,7 +57,7 @@ export default class MusicCommands {
             }));
         }
     
-        if (this.music.getPlayerChannel(event.msg.guild.id) === event.msg.member.voice.channelID) {
+        if (this.music.getPlayerChannel(event.msg.guild.id).id === event.msg.member.voice.channelID) {
             await this.music.playerUserJoin(event.msg.guild.id, event.msg.author.id);
     
             return await event.send(new MessageEmbed({
@@ -59,7 +68,7 @@ export default class MusicCommands {
     
         if (!this.music.getPlayerHost(event.msg.guild.id)) {
             await this.music.leaveGuild(event.msg.guild.id);
-            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channelID, event.msg.channel.id);
+            await this.music.joinChannel(event.msg.guild.id, event.msg.member.voice.channel, <TextChannel>event.msg.channel);
     
             return await event.send(new MessageEmbed({
                 description: `Come listen along in <#${event.msg.member.voice.channelID}>`,

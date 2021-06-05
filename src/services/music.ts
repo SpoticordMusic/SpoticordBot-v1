@@ -1,4 +1,4 @@
-import { Client, MessageEmbed, TextChannel, User, VoiceState } from "discord.js";
+import { Client, MessageEmbed, TextChannel, User, VoiceChannel, VoiceState } from "discord.js";
 import ConfigManager from "../config";
 import { DB } from "../db";
 import { LavaManager, LavaTrackInfo } from "./lava";
@@ -49,7 +49,7 @@ export default class MusicPlayerService {
             } else if (oldState.channelID && newState.channelID && oldState.channelID !== newState.channelID) {
                 // Bot MOVED voice channel
                 
-                await this.players.get(newState.guild.id).updateChannel(newState.channelID);
+                await this.players.get(newState.guild.id).updateChannel(newState.channel);
             }
 
             return;
@@ -58,7 +58,7 @@ export default class MusicPlayerService {
         if (this.players.has(oldState.guild.id)) { // Old state was in a guild where music is playing
             const player = this.players.get(oldState.guild.id);
 
-            if (player.voice_channel === oldState.channelID && player.voice_channel !== newState.channelID) { // User got out of channel with bot
+            if (player.voice_channel.id === oldState.channelID && player.voice_channel.id !== newState.channelID) { // User got out of channel with bot
                 player.userLeft(oldState.id);
             }
         }
@@ -66,7 +66,7 @@ export default class MusicPlayerService {
         if (this.players.has(newState.guild.id)) {
             const player = this.players.get(newState.guild.id);
 
-            if (player.voice_channel === newState.channelID && player.voice_channel !== oldState.channelID) {
+            if (player.voice_channel.id === newState.channelID && player.voice_channel.id !== oldState.channelID) {
                 await player.userJoined(newState.id);
             }
         }
@@ -82,7 +82,7 @@ export default class MusicPlayerService {
         return 'PLAYING';
     }
 
-    public getPlayerChannel(guild_id: string): string | null {
+    public getPlayerChannel(guild_id: string): VoiceChannel | null {
         if (!this.players.has(guild_id)) return null;
 
         return this.players.get(guild_id).voice_channel;
@@ -132,7 +132,7 @@ export default class MusicPlayerService {
         this.users.delete(user_id);
     }
 
-    public async joinChannel(guild_id: string, voice_channel: string, text_channel: string): Promise<SpotifyPlayer> {
+    public async joinChannel(guild_id: string, voice_channel: VoiceChannel, text_channel: TextChannel): Promise<SpotifyPlayer> {
         if (this.players.has(guild_id)) return this.players.get(guild_id);
 
         const player = new SpotifyPlayer(guild_id, voice_channel, text_channel, this.client, this, this.db);
@@ -157,7 +157,7 @@ export default class MusicPlayerService {
 
         if (afk) {
             try {
-                await (<TextChannel>this.client.guilds.cache.get(player.guild_id).channels.cache.get(player.text_channel)).send(new MessageEmbed({
+                await player.text_channel.send(new MessageEmbed({
                     description: 'I left the voice channel because of inactivity',
                     author: {name: 'Left voice channel'},
                     color: '#d61516'
