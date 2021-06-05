@@ -37,7 +37,7 @@ if (conf.getDirty()) {
 const dbConfig = conf.get('database');
 
 const client = new Discord.Client();
-const dbEngine: DB = dbConfig.strategy === 'mongo' ? new MongoPoweredDB(`mongodb://${dbConfig.username}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/`, dbConfig.db) : new JSONPoweredDB(dbConfig.filename);
+const dbEngine: DB = dbConfig.strategy === 'mongo' ? new MongoPoweredDB(`mongodb://${dbConfig.username}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${dbConfig.port}/`, dbConfig.db) : new JSONPoweredDB(dbConfig.filename);
 const cmdEmitter = new CommandEmitter(conf, dbEngine);
 const musicService = new MusicPlayerService(conf, client, dbEngine);
 const linkerService = new LinkerService();
