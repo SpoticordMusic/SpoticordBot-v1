@@ -2,7 +2,7 @@
   <img src="https://spoticord.com/img/spoticord-with-text.png?nocache=2" alt="Spoticord logo" title="Spoticord" align="right" height="80" />
 </a>
 
-# Spoticord Music
+# Spoticord
 
 <sub><sup>First of all I want to tell everyone that I am terrible at making README's so if you see something horrible please let me know 🙃</sup></sub>
 

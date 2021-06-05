@@ -142,3 +142,8 @@ dbEngine.initialize().then((success) => {
         client.login(conf.get('token'));
     });
 });
+
+process.on('SIGINT', () => {
+    console.log('[SIGINT] Shutting down...');
+    client.destroy();
+});
