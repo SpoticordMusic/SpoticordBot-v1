@@ -41,7 +41,12 @@ export class SpotifyPlayer extends EventEmitter {
     private manager: LavaManager;
 
     private host: SpotifyUser;
+
+    // Spoticord users who are in the same call as the bot
     private users: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
+
+    // Spoticord users who are in the same call AND have their Spotify set to Spoticord
+    private controllers: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
 
     constructor(public guild_id: string, public voice_channel: VoiceChannel, public text_channel: TextChannel, public client: Client, public music: MusicPlayerService, private db: DB) {
         super();
@@ -97,6 +102,8 @@ export class SpotifyPlayer extends EventEmitter {
             this.music.destroyUser(user_id);
         }
 
+        this.users.delete(user_id);
+
         if (!this.player_info.is_247 && this.voice_channel.members.size != 2) {
             this.updatePlayerKickTimeout();
         }
@@ -132,8 +139,8 @@ export class SpotifyPlayer extends EventEmitter {
 
     protected destroyAllUsers() {
         this.host = null;
-        for (const player of this.users) {
-            this.music.destroyUser(player[0]);
+        for (const [player] of this.users) {
+            this.music.destroyUser(player);
         }
         this.users.clear();
     }
@@ -208,12 +215,12 @@ export class SpotifyPlayer extends EventEmitter {
 
     // Triggered when the user switched away from the Spoticord device
     protected async onPlaybackLost(user: SpotifyUser) {
-        this.users.delete(user.discord_id);
+        this.controllers.delete(user.discord_id);
 
         if (this.host?.discord_id === user.discord_id) {
             this.host = null;
 
-            if (this.users.size < 1 && this.player.playing) {
+            if (this.controllers.size < 1 && this.player.playing) {
                 await this.player.stop();
 
                 this.startPlayerKickTimeout();
@@ -222,7 +229,7 @@ export class SpotifyPlayer extends EventEmitter {
                 this.player_info.spotify_track = null;
                 this.player_info.youtube_track = null;
             } else {
-                this.host = this.users[0];
+                this.host = this.controllers[0];
             }
         }
 
@@ -231,8 +238,8 @@ export class SpotifyPlayer extends EventEmitter {
 
     // Before playing the track
     protected onPlaybackPre(user: SpotifyUser) {
-        if (!this.users.has(user.discord_id)) {
-            this.users.set(user.discord_id, user);
+        if (!this.controllers.has(user.discord_id)) {
+            this.controllers.set(user.discord_id, user);
         }
 
         if (!this.host) {
