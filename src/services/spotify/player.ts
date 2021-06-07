@@ -185,6 +185,10 @@ export class SpotifyPlayer extends EventEmitter {
             this.onPlayTrack(spotifyUser, e.paused, e.position, e.track);
         });
 
+        spotifyUser.on('state-conflict', (e) => {
+            this.onStateConflict(spotifyUser, e);
+        })
+
         await spotifyUser.initialize();
     }
 
@@ -298,6 +302,13 @@ export class SpotifyPlayer extends EventEmitter {
         this.player_info.position = this.player.state.position;
 
         console.debug(`modify-playback`);
+    }
+
+    // I hate this, I don't know whats happening
+    protected onStateConflict(user: SpotifyUser, e) {
+        e.setPosition(this.yt_to_spotify(this.player.state.position));
+
+        console.debug(`state-conflict`);
     }
 
     // When a new track is played

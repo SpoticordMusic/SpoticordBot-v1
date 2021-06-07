@@ -162,6 +162,19 @@ export class SpotifyUser extends EventEmitter {
 
                 this.emit('volume', payload.volume);
             } else if (payload.type === 'replace_state') {
+                if (!this.state_manager.isCurrentStateRef(payload.prev_state_ref)) {
+                    // CONFLICT
+                    
+                    let pos = 0;
+                    this.emit('state-conflict', {
+                        setPosition: (position) => pos = position
+                    });
+
+                    await this.state_manager.rejectState(this.state_manager.getCurrentStateRef(), pos, this.wsOnMessage.bind(this));
+
+                    return;
+                }
+
                 this.state_manager.replaceState(payload);
 
                 if (!this.state_manager.isActiveDevice()) {
