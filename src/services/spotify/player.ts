@@ -194,13 +194,13 @@ export class SpotifyPlayer extends EventEmitter {
 
     protected async onPlayerEnd(data: LavalinkEvent) {
         if (data.reason === 'REPLACED') return;
-
-        this.player_info.position = 0;
-        this.player_info.spotify_track = null;
-        this.player_info.youtube_track = null;
-
         if (data.reason === 'CLEANUP') return;
-        if (data.reason === 'STOPPED') return;
+        if (data.reason === 'STOPPED') {
+            this.player_info.position = 0;
+            this.player_info.spotify_track = null;
+            this.player_info.youtube_track = null;
+            return;
+        }
 
         if (!this.host || !this.player) return;
 
