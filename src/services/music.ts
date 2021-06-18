@@ -176,4 +176,12 @@ export default class MusicPlayerService {
     public getDiscordUser(discord_id: string): User | null {
         return this.client.users.cache.get(discord_id)
     }
+
+    public getPlayers(): SpotifyPlayer[] {
+        return Array.from(this.players.values());
+    }
+
+    public getPlayer(guild_id: string): SpotifyPlayer {
+        return this.players.get(guild_id) || null;
+    }
 }

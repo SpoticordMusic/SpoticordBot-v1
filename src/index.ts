@@ -13,6 +13,7 @@ import ConfigManager from './config';
 import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
 import { SpotifyWebHelper } from './services/spotify/user';
+import SpoticordRealtime from './services/realtime';
 
 const _env = dotenv.config().parsed;
 
@@ -94,6 +95,11 @@ client.on('ready', async () => {
     //  performing an oauth authorization grant, so this function won't check if these parameters are valid
     musicService.initialize(manager);
     SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+
+    if (conf.get('realtime')) {
+        console.log('[INFO] Spotify initialized, starting Realtime initialization...');
+        SpoticordRealtime.startRealtimeService(conf.get('realtime').port, conf.get('realtime').host, client, musicService);
+    }
 
     console.log(`[INFO] Initialization completed`);
 });

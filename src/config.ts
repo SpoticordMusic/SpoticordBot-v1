@@ -38,6 +38,13 @@ export default class ConfigManager {
 
             assert(Array.isArray(nodes), 'Dirty field: nodes');
             assert(nodes.length, 'Dirty field: nodes');
+
+            if (this.config.has('realtime')) {
+                const realtime = this.config.get('realtime');
+                assert(typeof realtime === 'object', 'Dirty field: realtime');
+                assert(typeof realtime.port === 'number', 'Dirty field: realtime.port');
+                assert(typeof realtime.host === 'string', 'Dirty field: realtime.host')
+            }
         } catch (ex) {
             this.dirty = ex;
             return;
