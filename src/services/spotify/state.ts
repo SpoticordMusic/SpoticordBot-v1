@@ -258,7 +258,7 @@ export class SpotifyStateManager {
         let paused;
         let state: State;
 
-        if (!state_machine || this.current_state.state_ref.state_index === null) return null;
+        if (!state_machine || this.current_state.state_ref?.state_index === null) return null;
 
         if (this.current_state.state_ref.state_index < 0) {
             const new_state = this.current_state && state_machine.states[this.current_state.state_ref.state_index].transitions.advance;

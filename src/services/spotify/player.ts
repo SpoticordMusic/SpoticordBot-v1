@@ -363,6 +363,11 @@ export class SpotifyPlayer extends EventEmitter {
     protected startPositionTimer() {
         clearInterval(this.player_info.positionTimer);
         this.player_info.positionTimer = setInterval((() => {
+            if (!this.host) {
+                clearInterval(this.player_info.positionTimer);
+                return;
+            }
+
             this.player_info.position += 1000;
         }).bind(this), 1000);
     }
