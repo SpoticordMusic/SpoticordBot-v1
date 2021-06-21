@@ -309,6 +309,12 @@ export class SpotifyUser extends EventEmitter {
         return await this.state_manager.resumePlayback();
     }
 
+    public async nextTrack(): Promise<boolean> {
+        if (!this.initialized || this.destroyed) return false;
+
+        return await this.state_manager.nextTrack();
+    }
+
     protected wsOnClose(event: WebSocket.CloseEvent) {
         clearInterval(this.pingInterval);
         this.pingInterval = null;

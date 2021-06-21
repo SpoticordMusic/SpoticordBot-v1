@@ -14,6 +14,7 @@ import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
 import { SpotifyWebHelper } from './services/spotify/user';
 import SpoticordRealtime from './services/realtime';
+import disbut from 'discord.js-buttons';
 
 const _env = dotenv.config().parsed;
 
@@ -43,6 +44,8 @@ const cmdEmitter = new CommandEmitter(conf, dbEngine);
 const musicService = new MusicPlayerService(conf, client, dbEngine);
 const linkerService = new LinkerService();
 
+disbut(client);
+
 client.on('ready', async () => {
 
     await client.user.setActivity({
@@ -62,6 +65,7 @@ client.on('ready', async () => {
     cmdEmitter.addCommandHandler('leave', music.leave, 'dc', 'kick', 'disconnect');
     cmdEmitter.addCommandHandler('playing', music.playing, 'nowplaying', 'np');
     cmdEmitter.addCommandHandler('24/7', music.stay, 'stay');
+    music.attachButtonHandlers(client);
 
     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 

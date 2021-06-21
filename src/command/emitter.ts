@@ -2,6 +2,7 @@ import EventEmitter from "events";
 import * as Discord from 'discord.js';
 import { DB } from "../db";
 import ConfigManager from "../config";
+import { MessageOptions } from "node:child_process";
 
 export declare interface CommandEmitter {
     on(event: string | symbol, listener: (event: CommandEvent) => void);
@@ -22,13 +23,17 @@ export interface CommandEvent {
         options: Discord.MessageOptions & { split: true | Discord.SplitOptions },
     ): Promise<Discord.Message[]> | null,
     send(
-        content: Discord.APIMessageContentResolvable | (Discord.MessageOptions & { split?: false }) | Discord.MessageAdditions,
-    ): Promise<Discord.Message> | null,
-    send(options: Discord.MessageOptions & { split: true | Discord.SplitOptions }): Promise<Discord.Message[]> | null,
-    send(options: Discord.MessageOptions | Discord.APIMessage): Promise<Discord.Message | Discord.Message[]> | null,
-    send(content: Discord.StringResolvable, options: (Discord.MessageOptions & { split?: false }) | Discord.MessageAdditions): Promise<Discord.Message> | null,
-    send(content: Discord.StringResolvable, options: Discord.MessageOptions & { split: true | Discord.SplitOptions }): Promise<Discord.Message[]> | null,
-    send(content: Discord.StringResolvable, options: Discord.MessageOptions): Promise<Discord.Message | Discord.Message[]> | null,
+        content: Discord.APIMessageContentResolvable | (MessageOptions & { split?: false }) | Discord.MessageAdditions,
+      ): Promise<Discord.Message>;
+    send(options: MessageOptions & { split: true | Discord.SplitOptions }): Promise<Discord.Message[]>;
+    send(options: MessageOptions | Discord.APIMessage): Promise<Discord.Message | Discord.Message[]>;
+    send(content: Discord.StringResolvable, options: (MessageOptions & { split?: false }) | Discord.MessageAdditions): Promise<Discord.Message>;
+    send(content: Discord.StringResolvable, options: MessageOptions & { split: true | Discord.SplitOptions }): Promise<Discord.Message[]>;
+    send(content: Discord.StringResolvable, options: MessageOptions): Promise<Discord.Message | Discord.Message[]>;
+    send(
+        content: Discord.APIMessageContentResolvable | (MessageOptions & { split?: false }) | Discord.MessageAdditions,
+        options: any
+    ): Promise<Discord.Message>;
     args: string[],
     msg: Discord.Message,
     config: ConfigManager,

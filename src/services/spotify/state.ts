@@ -190,7 +190,7 @@ export class SpotifyStateManager {
     }
 
     public getCurrentTrack(): Track {
-        return this.current_state.state_machine.tracks[this.current_state.state_machine.states[this.current_state.state_ref.state_index].track];
+        return this.current_state?.state_machine?.tracks[this.current_state.state_machine.states[this.current_state.state_ref?.state_index].track];
     }
 
     public isCurrentStateRef(ref: SocketStateRef): boolean {
@@ -211,7 +211,7 @@ export class SpotifyStateManager {
             sub_state: {
                 playback_speed: ref && !ref.paused ? 1 : 0,
                 position: track_pos,
-                duration: this.getCurrentTrack().metadata.duration || void 0
+                duration: this.getCurrentTrack()?.metadata?.duration || void 0
             },
             previous_position: track_pos,
             rejected_state_refs: void 0
@@ -391,6 +391,38 @@ export class SpotifyStateManager {
 
     public async resumePlayback(): Promise<boolean> {
         let response = await axios.put('https://api.spotify.com/v1/me/player/play', {}, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/play[resume]] failed');
+                return false;
+            }
+
+            response = await axios.put('https://api.spotify.com/v1/me/player/play', {}, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/play[resume] failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public async nextTrack(): Promise<boolean> {
+        let response = await axios.post('https://api.spotify.com/v1/me/player/next', {}, {
             headers: {
                 Authorization: `Bearer ${this.token.access_token}`
             },

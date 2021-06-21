@@ -17,6 +17,7 @@ interface PlayerInfo {
     positionTimer: NodeJS.Timeout;
     repeat: 'OFF' | 'PLAYLIST' | 'SONG'; // TODO
     shuffle: boolean; // TODO
+    paused: boolean;
 
     // Timeout values
     is_247: boolean;
@@ -35,7 +36,8 @@ export class SpotifyPlayer extends EventEmitter {
         position: 0,
         positionTimer: null,
         repeat: 'OFF',
-        shuffle: false
+        shuffle: false,
+        paused: false
     };
 
     private manager: LavaManager;
@@ -135,6 +137,26 @@ export class SpotifyPlayer extends EventEmitter {
 
     public getTrackInfo(): [Track, LavaTrackInfo] {
         return [this.player_info.spotify_track, this.player_info.youtube_track];
+    }
+
+    public getPlayerInfo(): PlayerInfo {
+        return this.player_info;
+    }
+
+    public async seek(position: number): Promise<boolean> {
+        return await this.host.seekPlayback(position);
+    }
+
+    public async pause(): Promise<boolean> {
+        return await this.host.pausePlayback();
+    }
+    
+    public async resume(): Promise<boolean> {
+        return await this.host.resumePlayback();
+    }
+
+    public async next(): Promise<boolean> {
+        return await this.host.nextTrack();
     }
 
     protected destroyAllUsers() {
@@ -255,12 +277,13 @@ export class SpotifyPlayer extends EventEmitter {
 
     // On pause / resume of playback
     protected async onPausePlayback(user: SpotifyUser, e) {
-        e.setPosition(this.yt_to_spotify(this.player.state.position));
+        e.setPosition(this.yt_to_spotify(this.player_info.position));
 
         if (e.paused) clearInterval(this.player_info.positionTimer);
         else this.startPositionTimer();
 
-        this.player_info.position = this.player.state.position;
+        this.player_info.paused = e.paused;
+        this.player_info.position = e.paused ? this.player.state.position : this.player_info.position;
 
         if (this.host?.discord_id === user.discord_id) {
             await this.player.pause(e.paused);
@@ -341,6 +364,7 @@ export class SpotifyPlayer extends EventEmitter {
             this.player_info.youtube_track = track_list[0];
             this.player_info.spotify_track = track;
             this.player_info.position =  this.spotify_to_yt(position);
+            this.player_info.paused = paused;
 
             for (const [_, user] of this.users) {
                 if (user.discord_id === this.host.discord_id) continue;
@@ -351,7 +375,7 @@ export class SpotifyPlayer extends EventEmitter {
             if (!paused) this.stopPlayerKickTimeout();
             else if (!this.player_info.leave_timeout) this.startPlayerKickTimeout();
 
-            console.debug(`play-track = paused = ${paused}, position = ${position}, name = ${search}`);
+            console.debug(`play-track = paused = ${paused}, position = ${position} (${this.player_info.position}), name = ${search}`);
 
             await this.player.play(track_list[0].track, {pause: paused, startTime: this.spotify_to_yt(position)});
 
