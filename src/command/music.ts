@@ -1,7 +1,7 @@
 import { Client, Message, MessageEmbed, TextChannel } from "discord.js";
 import MusicPlayerService from "../services/music";
 import { CommandEvent } from "./emitter";
-import { MessageButton } from 'discord.js-buttons';
+import { MessageButton, MessageButtonStyles } from 'discord-buttons';
 
 export default class MusicCommands {
     constructor(private music: MusicPlayerService) {
@@ -169,17 +169,17 @@ export default class MusicCommands {
         positionText = `${isPaused ? '⏸️' : '▶️'} ${positionText} ${_strtime(Math.floor(player_info.position / 1000))} / ${_strtime(Math.floor(player_info.youtube_track.info.length / 1000))}`;
 
         const prev_button = new MessageButton()
-            .setStyle('green')
+            .setStyle(MessageButtonStyles.green)
             .setLabel('<<')
             .setID('btn_previous_track');
 
         const pause_resume_button = new MessageButton()
-            .setStyle('gray')
+            .setStyle(MessageButtonStyles.grey)
             .setLabel(isPaused ? 'Play' : 'Pause')
             .setID('btn_pause_play');
 
         const next_button = new MessageButton()
-            .setStyle('green')
+            .setStyle(MessageButtonStyles.green)
             .setLabel('>>')
             .setID('btn_next_track');            
     
@@ -206,7 +206,7 @@ export default class MusicCommands {
             this.music.getPlayerState(button.guild.id) === 'INACTIVE') return await button.defer();
 
         const host = player.getHost();
-        if (button.clicker['user']['id'] !== host.discord_id)
+        if (button.clicker['id'] !== host.discord_id)
             return await button.reply.send('You must be the host to use the media buttons', {ephemeral: true});
 
         if (await player.seek(0)) await this.updatePlayingMessage(button);
@@ -220,7 +220,7 @@ export default class MusicCommands {
             this.music.getPlayerState(button.guild.id) === 'INACTIVE') return await button.defer();
 
         const host = player.getHost();
-        if (button.clicker['user']['id'] !== host.discord_id)
+        if (button.clicker['id'] !== host.discord_id)
             return await button.reply.send('You must be the host to use the media buttons', {ephemeral: true});
 
         if (player.getPlayerInfo().paused) {
@@ -238,7 +238,7 @@ export default class MusicCommands {
             this.music.getPlayerState(button.guild.id) === 'INACTIVE') return await button.defer();
 
         const host = player.getHost();
-        if (button.clicker['user']['id'] !== host.discord_id)
+        if (button.clicker['id'] !== host.discord_id)
             return await button.reply.send('You must be the host to use the media buttons', {ephemeral: true});
 
         if (await player.next()) {

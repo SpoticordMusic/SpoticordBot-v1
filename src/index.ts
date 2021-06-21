@@ -14,7 +14,7 @@ import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
 import { SpotifyWebHelper } from './services/spotify/user';
 import SpoticordRealtime from './services/realtime';
-import disbut from 'discord.js-buttons';
+import disbut from 'discord-buttons';
 
 const _env = dotenv.config().parsed;
 
