@@ -194,13 +194,13 @@ export class SpotifyStateManager {
     }
 
     public isCurrentStateRef(ref: SocketStateRef): boolean {
-        const c_ref = this.getCurrentStateRef() || null;
+        const c_ref = this.getCurrentStateRef();
 
-        if (c_ref == null && ref == null) return true;
+        if (!c_ref && !ref) return true;
 
-        return c_ref.state_machine_id === ref.state_machine_id &&
-            c_ref.state_id === ref.state_id &&
-            c_ref.paused === ref.paused
+        return c_ref?.state_machine_id === ref?.state_machine_id &&
+            c_ref?.state_id === ref?.state_id &&
+            c_ref?.paused === ref?.paused
     }
 
     public async rejectState(ref: SocketStateRef, track_pos: number, callback: Function) {
