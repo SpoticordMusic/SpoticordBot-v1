@@ -206,7 +206,8 @@ export default class MusicCommands {
             this.music.getPlayerState(button.guild.id) === 'INACTIVE') return await button.defer();
 
         const host = player.getHost();
-        if (button.clicker['user']['id'] !== host.discord_id) return; // Cause an "interaction failed" as there isn't an "error reply" function yet
+        if (button.clicker['user']['id'] !== host.discord_id)
+            return await button.reply.send('You must be the host to use the media buttons', {ephemeral: true});
 
         if (await player.seek(0)) await this.updatePlayingMessage(button);
     }
@@ -219,7 +220,8 @@ export default class MusicCommands {
             this.music.getPlayerState(button.guild.id) === 'INACTIVE') return await button.defer();
 
         const host = player.getHost();
-        if (button.clicker['user']['id'] !== host.discord_id) return; // Cause an "interaction failed" as there isn't an "error reply" function yet
+        if (button.clicker['user']['id'] !== host.discord_id)
+            return await button.reply.send('You must be the host to use the media buttons', {ephemeral: true});
 
         if (player.getPlayerInfo().paused) {
             if (await player.resume()) await this.updatePlayingMessage(button);
@@ -236,7 +238,8 @@ export default class MusicCommands {
             this.music.getPlayerState(button.guild.id) === 'INACTIVE') return await button.defer();
 
         const host = player.getHost();
-        if (button.clicker['user']['id'] !== host.discord_id) return; // Cause an "interaction failed" as there isn't an "error reply" function yet
+        if (button.clicker['user']['id'] !== host.discord_id)
+            return await button.reply.send('You must be the host to use the media buttons', {ephemeral: true});
 
         if (await player.next()) {
             await button.defer();
