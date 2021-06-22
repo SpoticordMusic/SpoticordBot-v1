@@ -169,17 +169,17 @@ export default class MusicCommands {
         positionText = `${isPaused ? '⏸️' : '▶️'} ${positionText} ${_strtime(Math.floor(player_info.position / 1000))} / ${_strtime(Math.floor(player_info.youtube_track.info.length / 1000))}`;
 
         const prev_button = new MessageButton()
-            .setStyle(MessageButtonStyles.green)
+            .setStyle(3)
             .setLabel('<<')
             .setID('btn_previous_track');
 
         const pause_resume_button = new MessageButton()
-            .setStyle(MessageButtonStyles.grey)
+            .setStyle(2)
             .setLabel(isPaused ? 'Play' : 'Pause')
             .setID('btn_pause_play');
 
         const next_button = new MessageButton()
-            .setStyle(MessageButtonStyles.green)
+            .setStyle(3)
             .setLabel('>>')
             .setID('btn_next_track');            
     
