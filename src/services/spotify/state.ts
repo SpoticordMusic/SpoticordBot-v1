@@ -190,7 +190,7 @@ export class SpotifyStateManager {
     }
 
     public getCurrentTrack(): Track {
-        return this.current_state?.state_machine?.tracks[this.current_state.state_machine.states[this.current_state.state_ref?.state_index].track];
+        return this.current_state?.state_machine?.tracks[this.current_state.state_machine.states[this.current_state.state_ref?.state_index]?.track];
     }
 
     public isCurrentStateRef(ref: SocketStateRef): boolean {

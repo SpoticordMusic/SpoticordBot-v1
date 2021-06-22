@@ -1,7 +1,7 @@
 import { Client, Message, MessageEmbed, TextChannel } from "discord.js";
 import MusicPlayerService from "../services/music";
 import { CommandEvent } from "./emitter";
-import { MessageButton, MessageButtonStyles } from 'discord-buttons';
+import { MessageButton, MessageActionRow } from 'discord-buttons';
 
 export default class MusicCommands {
     constructor(private music: MusicPlayerService) {
@@ -181,7 +181,12 @@ export default class MusicCommands {
         const next_button = new MessageButton()
             .setStyle(3)
             .setLabel('>>')
-            .setID('btn_next_track');            
+            .setID('btn_next_track');
+
+        const actionRow = new MessageActionRow()
+            .addComponent(prev_button)
+            .addComponent(pause_resume_button)
+            .addComponent(next_button);
     
         return {
             embed: {
@@ -192,9 +197,7 @@ export default class MusicCommands {
                 footer: dcUser ? {text: `${dcUser.username}`, icon_url: dcUser.avatarURL()} : undefined,
                 color: '#0773d6'
             },
-            buttons: [
-                prev_button, pause_resume_button, next_button
-            ]
+            component: actionRow
         }
     }
 
