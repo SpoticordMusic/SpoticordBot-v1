@@ -63,7 +63,7 @@ You can find an example `config.example.json` file at the root of the repo. This
 | token                 | **Yes**  | N/A                      | The Discord bot token
 | spotify_client_id     | **Yes**  | N/A                      | The Spotify client ID
 | spotify_client_secret | **Yes**  | N/A                      | The Spotify client secret
-| nodes                 | **Yes**  | N/A                      | An array of objects containing lavalink Nodes (id: string, host: string, port: number, password: string)
+| nodes                 | **Yes**  | N/A                      | An array of objects containing lavalink Nodes (identifier: string, host: string, port: number, password: string)
 | realtime              | No       | Null (Disabled)          | An object containing `host` (string) and `port` (number) for listening on the Realtime server.
 | database              | No       | JsonDB at ./db.json      | [Setting up a database](#setting-up-a-database)
 | linker_hostname       | No       | '127.0.0.1'              | The hostname the linker website will listen on
