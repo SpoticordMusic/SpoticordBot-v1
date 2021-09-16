@@ -62,7 +62,7 @@ export default class SpoticordRealtime {
         if (typeof req.body.content === 'string') {
           await player.text_channel?.send(req.body.content);
         } else if (typeof req.body.content === 'object') {
-          await player.text_channel?.send('', req.body.content);
+          await player.text_channel?.send(req.body.content);
         } else return res.status(400).json({error: 'Invalid body'});
 
         success.push(player.guild_id);

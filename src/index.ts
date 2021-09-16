@@ -8,13 +8,12 @@ import MusicCommands from './command/music';
 import { DB } from './db';
 import MongoPoweredDB from './db/mongo';
 import JSONPoweredDB from './db/json';
-import { LavaManager } from './services/lava';
 import ConfigManager from './config';
 import MusicPlayerService from './services/music';
 import LinkerService from './services/linker';
 import { SpotifyWebHelper } from './services/spotify/user';
 import SpoticordRealtime from './services/realtime';
-import disbut from 'discord-buttons';
+import { Manager } from 'erela.js';
 
 const _env = dotenv.config().parsed;
 
@@ -38,13 +37,16 @@ if (conf.getDirty()) {
 
 const dbConfig = conf.get('database');
 
-const client = new Discord.Client();
+const client = new Discord.Client({ intents: [
+    Discord.Intents.FLAGS.GUILDS,
+    Discord.Intents.FLAGS.GUILD_MESSAGES,
+    Discord.Intents.FLAGS.GUILD_VOICE_STATES
+] });
+
 const dbEngine: DB = dbConfig.strategy === 'mongo' ? new MongoPoweredDB(`mongodb://${dbConfig.username}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${dbConfig.port}/`, dbConfig.db) : new JSONPoweredDB(dbConfig.filename);
 const cmdEmitter = new CommandEmitter(conf, dbEngine);
 const musicService = new MusicPlayerService(conf, client, dbEngine);
 const linkerService = new LinkerService();
-
-disbut(client);
 
 client.on('ready', async () => {
 
@@ -71,29 +73,20 @@ client.on('ready', async () => {
 
     const nodes = conf.get('nodes');
 
-    const manager = new LavaManager(client, nodes, {
-        user: client.user.id,
+    const manager = new Manager({
+        nodes,
+        send(id, payload) {
+            const guild = client.guilds.cache.get(id);
+            guild && guild.shard.send(payload);
+        },
         shards: 1
     });
 
-    let lavaReady = false;
-
-    manager.on('error', (e) => {
-        if (!lavaReady) {
-            console.error(`[FATAL] Lavalink Initialization failed`);
-            
-            client.destroy();
-            process.exit(-1);
-        }
-
-        console.error('Lavalink error: ', e);
-    });
-
-    await manager.connect();
-
-    lavaReady = true;
+    manager.init(client.user.id);
 
     console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
+
+    client.on('raw', d => manager.updateVoiceState(d));
 
     // I have not yet figured out a way to validate the client id and client secret without 
     //  performing an oauth authorization grant, so this function won't check if these parameters are valid

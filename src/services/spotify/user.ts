@@ -90,7 +90,7 @@ export class SpotifyUser extends EventEmitter {
                 }
 
                 let postData: any = {
-                    client_version: 'harmony:3.19.1-441cc8f',
+                    client_version: 'harmony:4.19.0-9f444d2',
                     connection_id: data.headers['Spotify-Connection-Id'],
                     device: {
                         brand: 'public_js-sdk',
@@ -100,15 +100,18 @@ export class SpotifyUser extends EventEmitter {
                             disable_connect: false,
                             enable_play_token: true,
                             manifest_formats: ['file_urls_mp3', 'file_urls_external', 'file_ids_mp4', 'file_ids_mp4_dual'],
-                            play_token_lost_bheavior: 'pause'
+                            play_token_lost_bheavior: 'pause',
+                            supports_file_media_type: true
                         },
                         device_id: this.device_id,
                         device_type: 'speaker',
+                        is_group: false,
                         metadata: {},
-                        model: 'harmony-chrome.86-windows',
-                        name: await this.db.getDeviceName(this.token.discord_id)
+                        model: 'harmony-node.spoticord-ts',
+                        name: await this.db.getDeviceName(this.token.discord_id),
+                        platform_identifier: 'Partner public_js-sdk harmony-node.spoticord-ts'
                     },
-                    previous_session_state: null,
+                    outro_endcontent_snooping: false,
                     volume: 65535
                 };
 

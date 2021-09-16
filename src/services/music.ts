@@ -1,10 +1,10 @@
 import { Client, MessageEmbed, TextChannel, User, VoiceChannel, VoiceState } from "discord.js";
 import ConfigManager from "../config";
 import { DB } from "../db";
-import { LavaManager, LavaTrackInfo } from "./lava";
 import { SpotifyPlayer } from "./spotify/player";
 import { Track } from "./spotify/state";
 import { SpotifyUser } from "./spotify/user";
+import { Track as LavaTrack, Manager } from 'erela.js';
 
 type MusicPlayerState = 'DISCONNECTED' | 'INACTIVE' | 'PAUSED' | 'PLAYING';
 type UserState = 'INACTIVE' | 'ACTIVE';
@@ -13,7 +13,7 @@ export default class MusicPlayerService {
     private spotify_client_id: string;
     private spotify_client_secret: string;
 
-    private manager: LavaManager;
+    private manager: Manager;
 
     private players: Map<string, SpotifyPlayer> = new Map<string, SpotifyPlayer>();
     private users: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
@@ -26,7 +26,7 @@ export default class MusicPlayerService {
         this.onVoiceStateUpdate = this.onVoiceStateUpdate.bind(this);
     }
 
-    public initialize(manager: LavaManager) {
+    public initialize(manager: Manager) {
         this.client.on('voiceStateUpdate', this.onVoiceStateUpdate);
 
         this.manager = manager;
@@ -39,17 +39,17 @@ export default class MusicPlayerService {
                 return;
             }
 
-            if (oldState.channelID && !newState.channelID) {
+            if (oldState.channelId && !newState.channelId) {
                 // Bot LEFT voice channel
                 if (this.players.has(oldState.guild.id)) {
                     await this.players.get(oldState.guild.id).leave();
 
                     this.players.delete(oldState.guild.id);
                 }
-            } else if (oldState.channelID && newState.channelID && oldState.channelID !== newState.channelID) {
+            } else if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
                 // Bot MOVED voice channel
                 
-                await this.players.get(newState.guild.id).updateChannel(newState.channel);
+                await this.players.get(newState.guild.id).updateChannel(newState.channel as VoiceChannel);
             }
 
             return;
@@ -58,7 +58,7 @@ export default class MusicPlayerService {
         if (this.players.has(oldState.guild.id)) { // Old state was in a guild where music is playing
             const player = this.players.get(oldState.guild.id);
 
-            if (player.voice_channel.id === oldState.channelID && player.voice_channel.id !== newState.channelID) { // User got out of channel with bot
+            if (player.voice_channel.id === oldState.channelId && player.voice_channel.id !== newState.channelId) { // User got out of channel with bot
                 player.userLeft(oldState.id);
             }
         }
@@ -66,13 +66,13 @@ export default class MusicPlayerService {
         if (this.players.has(newState.guild.id)) {
             const player = this.players.get(newState.guild.id);
 
-            if (player.voice_channel.id === newState.channelID && player.voice_channel.id !== oldState.channelID) {
+            if (player.voice_channel.id === newState.channelId && player.voice_channel.id !== oldState.channelId) {
                 await player.userJoined(newState.id);
             }
         }
     }
 
-    public getLavaManager(): LavaManager {
+    public getLavaManager(): Manager {
         return this.manager;
     }
 
@@ -157,16 +157,18 @@ export default class MusicPlayerService {
 
         if (afk) {
             try {
-                await player.text_channel.send(new MessageEmbed({
-                    description: 'I left the voice channel because of inactivity',
-                    author: {name: 'Left voice channel'},
-                    color: '#d61516'
-                }));
+                await player.text_channel.send({
+                    embeds: [new MessageEmbed({
+                        description: 'I left the voice channel because of inactivity',
+                        author: {name: 'Left voice channel'},
+                        color: '#d61516'
+                    })]
+                });
             } catch (ex) {}
         }
     }
 
-    public getTrackInfo(guild_id: string): [Track, LavaTrackInfo] | null {
+    public getTrackInfo(guild_id: string): [Track, LavaTrack] | null {
         if (!this.players.has(guild_id)) return null;
 
         const player = this.players.get(guild_id);

@@ -1,8 +1,7 @@
 import { Client, MessageEmbed, TextChannel, VoiceChannel } from "discord.js";
-import { LavalinkEvent, Player } from "@lavacord/discord.js";
+import { Player, Track as LavaTrack, TrackEndEvent, Manager } from "erela.js";
 import EventEmitter from "events";
 import { DB } from "../../db";
-import { LavaManager, LavaTrackInfo } from "../lava";
 import MusicPlayerService from "../music";
 import { Track } from "./state";
 import { SpotifyUser } from "./user";
@@ -10,7 +9,7 @@ import { SpotifyUser } from "./user";
 interface PlayerInfo {
     // Track info values
     spotify_track: Track;
-    youtube_track: LavaTrackInfo;
+    youtube_track: LavaTrack;
 
     // Player state values
     position: number;
@@ -40,7 +39,7 @@ export class SpotifyPlayer extends EventEmitter {
         paused: false
     };
 
-    private manager: LavaManager;
+    private manager: Manager;
 
     private host: SpotifyUser;
 
@@ -62,16 +61,20 @@ export class SpotifyPlayer extends EventEmitter {
     }
 
     public async join() {
-        this.player = await this.manager.join({
-            channel: this.voice_channel.id,
+        this.player = await this.manager.create({
+            voiceChannel: this.voice_channel.id,
+            textChannel: this.text_channel.id,
             guild: this.guild_id,
-            node: this.manager.idealNodes[0].id
-        }, { selfdeaf: true });
+            node: this.manager.nodes.first().options.identifier,
+            selfDeafen: true
+        });
+
+        this.player.connect();
         
         // Remove redundant onend event handlers (idk how the lavalink lib works but without the 'off' it breaks the bot after moving it)
-        this.player.off('end', this.onPlayerEnd).on('end', this.onPlayerEnd);
+        this.manager.off('queueEnd', this.onPlayerEnd).on('queueEnd', this.onPlayerEnd);
 
-        await this.player.volume(20);
+        await this.player.setVolume(40);
 
         const members = this.voice_channel.members;
     
@@ -84,7 +87,6 @@ export class SpotifyPlayer extends EventEmitter {
 
     public async leave() {
         await this.player.destroy();
-        await this.manager.leave(this.guild_id);
 
         this.stopPlayerKickTimeout();
         this.destroyAllUsers();
@@ -135,7 +137,7 @@ export class SpotifyPlayer extends EventEmitter {
         return this.host;
     }
 
-    public getTrackInfo(): [Track, LavaTrackInfo] {
+    public getTrackInfo(): [Track, LavaTrack] {
         return [this.player_info.spotify_track, this.player_info.youtube_track];
     }
 
@@ -214,7 +216,11 @@ export class SpotifyPlayer extends EventEmitter {
         await spotifyUser.initialize();
     }
 
-    protected async onPlayerEnd(data: LavalinkEvent) {
+    protected async onPlayerEnd(player: Player, track: LavaTrack, data: TrackEndEvent) {
+        console.debug('PLAYER END', player.guild, this.guild_id)
+        
+        if (player.guild !== this.guild_id) return;
+
         if (data.reason === 'REPLACED') return;
         if (data.reason === 'CLEANUP') return;
         if (data.reason === 'STOPPED') {
@@ -231,10 +237,10 @@ export class SpotifyPlayer extends EventEmitter {
     }
 
     protected async onVolume(user: SpotifyUser, volume: number) {
-        volume = Math.min(150, Math.max(0, volume / 65535 * 20));
+        volume = Math.min(150, Math.max(0, volume / 65535 * 40));
         
         if (this.host?.discord_id === user.discord_id) {
-            await this.player.volume(volume);
+            await this.player.setVolume(volume);
             console.debug(`volume = ${volume}`);
         }
     }
@@ -283,10 +289,10 @@ export class SpotifyPlayer extends EventEmitter {
         else this.startPositionTimer();
 
         this.player_info.paused = e.paused;
-        this.player_info.position = e.paused ? this.player.state.position : this.player_info.position;
+        this.player_info.position = e.paused ? this.player.position : this.player_info.position;
 
         if (this.host?.discord_id === user.discord_id) {
-            await this.player.pause(e.paused);
+            this.player.pause(e.paused);
 
             for (const [_, user] of this.users) {
                 if (user.discord_id === this.host.discord_id) continue;
@@ -303,7 +309,7 @@ export class SpotifyPlayer extends EventEmitter {
 
     // When position of song was changed
     protected async onSeekPlayback(user: SpotifyUser, e) {
-        e.setPosition(this.yt_to_spotify(this.player.state.position));
+        e.setPosition(this.yt_to_spotify(this.player.position));
         this.player_info.position = this.spotify_to_yt(e.position);
 
         if (this.host?.discord_id === user.discord_id) {
@@ -321,15 +327,15 @@ export class SpotifyPlayer extends EventEmitter {
 
     // I dont remember
     protected onModifyPlayback(user: SpotifyUser, e) {
-        e.setPosition(this.yt_to_spotify(this.player.state.position));
-        this.player_info.position = this.player.state.position;
+        e.setPosition(this.yt_to_spotify(this.player.position));
+        this.player_info.position = this.player.position;
 
         console.debug(`modify-playback`);
     }
 
     // I hate this, I don't know whats happening
     protected onStateConflict(user: SpotifyUser, e) {
-        e.setPosition(this.yt_to_spotify(this.player.state.position));
+        e.setPosition(this.yt_to_spotify(this.player.position));
 
         console.debug(`state-conflict`);
     }
@@ -340,19 +346,22 @@ export class SpotifyPlayer extends EventEmitter {
             const search = `${track.metadata.authors.map((author_name) => author_name.name).join(', ')} - ${track.metadata.name}`;
             const query = `ytsearch:${search}`;
 
-            let track_list: LavaTrackInfo[];
+            let track_list: LavaTrack[];
 
             for (var i = 0; i < 3; i++) {
-                track_list = await this.manager.getSongs(query);
+                const result = await this.manager.search(search);
+                track_list = result.tracks;
 
                 if (track_list.length > 0) break;
             }
 
             if (track_list.length < 1) {
-                await this.text_channel.send(new MessageEmbed({
-                    description: `No track found for ${search}`,
-                    color: '#D61516'
-                }));
+                await this.text_channel.send({
+                    embeds: [new MessageEmbed({
+                        description: `No track found for ${search}`,
+                        color: '#D61516'
+                    })]
+                });
 
                 console.debug(`No track found for ${search}`);
 
@@ -377,10 +386,12 @@ export class SpotifyPlayer extends EventEmitter {
 
             console.debug(`play-track = paused = ${paused}, position = ${position} (${this.player_info.position}), name = ${search}`);
 
-            await this.player.play(track_list[0].track, {pause: paused, startTime: this.spotify_to_yt(position)});
+            await this.player.play(track_list[0], {startTime: this.spotify_to_yt(position)});
 
             if (!paused) this.startPositionTimer();
             else clearInterval(this.player_info.positionTimer);
+
+            if (paused) setTimeout(() => this.player.pause(true), 100);
         }
     }
 
@@ -398,12 +409,12 @@ export class SpotifyPlayer extends EventEmitter {
 
     // Convert the Spotify song position to the YouTube song position
     protected spotify_to_yt(position: number): number {
-        return (position / this.player_info.spotify_track?.metadata.duration) * this.player_info.youtube_track?.info.length;
+        return (position / this.player_info.spotify_track?.metadata.duration) * this.player_info.youtube_track?.duration;
     }
 
     // Convert the YouTube song position to the Spotify song position
     protected yt_to_spotify(position: number): number {
-        return (position / this.player_info.youtube_track?.info.length) * this.player_info.spotify_track?.metadata.duration;
+        return (position / this.player_info.youtube_track?.duration) * this.player_info.spotify_track?.metadata.duration;
     }
 
     // Triggers when the "do not kick" criteria no applies
