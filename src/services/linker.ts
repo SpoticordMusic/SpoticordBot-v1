@@ -69,7 +69,7 @@ export default class LinkerService {
       `https://accounts.spotify.com/authorize?client_id=${this.client_id}` +
         `&response_type=code&redirect_uri=${this.redir_url}&state=${req.params.token}` +
         `&scope=${encodeURI(
-          "ugc-image-upload playlist-modify-private playlist-read-private playlist-modify-public playlist-read-collaborative user-read-private user-read-email user-read-playback-state user-modify-playback-state user-read-currently-playing user-library-modify user-library-read user-read-recently-played streaming user-follow-modify user-follow-read app-remote-control"
+          "streaming user-read-email user-modify-playback-state user-read-private"
         )}&show_dialog=true`
     );
   }
