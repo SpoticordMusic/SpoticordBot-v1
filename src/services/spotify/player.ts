@@ -3,6 +3,7 @@ import { Player, Track as LavaTrack, TrackEndEvent, Manager } from "erela.js";
 import EventEmitter from "events";
 import { DB } from "../../db";
 import MusicPlayerService from "../music";
+import Spoticord from "../spoticord";
 import { Track } from "./state";
 import { SpotifyUser } from "./user";
 
@@ -49,7 +50,7 @@ export class SpotifyPlayer extends EventEmitter {
     // Spoticord users who are in the same call AND have their Spotify set to Spoticord
     private controllers: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
 
-    constructor(public guild_id: string, public voice_channel: VoiceChannel, public text_channel: TextChannel, public client: Client, public music: MusicPlayerService, private db: DB) {
+    constructor(public guild_id: string, public voice_channel: VoiceChannel, public text_channel: TextChannel) {
         super();
 
         this.onPlayerEnd = this.onPlayerEnd.bind(this);
@@ -57,7 +58,7 @@ export class SpotifyPlayer extends EventEmitter {
         this.startPlayerKickTimeout = this.startPlayerKickTimeout.bind(this);
         this.stopPlayerKickTimeout = this.stopPlayerKickTimeout.bind(this);
 
-        this.manager = music.getLavaManager();
+        this.manager = Spoticord.music_service.getLavaManager();
     }
 
     public async join() {
@@ -103,7 +104,7 @@ export class SpotifyPlayer extends EventEmitter {
 
     public userLeft(user_id: string) {
         if (this.users.has(user_id)) {
-            this.music.destroyUser(user_id);
+            Spoticord.music_service.destroyUser(user_id);
         }
 
         this.users.delete(user_id);
@@ -164,18 +165,18 @@ export class SpotifyPlayer extends EventEmitter {
     protected destroyAllUsers() {
         this.host = null;
         for (const [player] of this.users) {
-            this.music.destroyUser(player);
+            Spoticord.music_service.destroyUser(player);
         }
         this.users.clear();
     }
 
     protected async createUser(user_id: string) {
-        if (user_id === this.client.user.id) return;
+        if (user_id === Spoticord.client.user.id) return;
 
-        if (!await this.db.getToken(user_id)) return;
-        if (this.music.getUserState(user_id) === 'ACTIVE') return;
+        if (!await Spoticord.database.getToken(user_id)) return;
+        if (Spoticord.music_service.getUserState(user_id) !== 'INACTIVE') return;
 
-        const spotifyUser = this.music.createUser(user_id);
+        const spotifyUser = Spoticord.music_service.createUser(user_id);
 
         spotifyUser.removeAllListeners();
 
@@ -217,8 +218,6 @@ export class SpotifyPlayer extends EventEmitter {
     }
 
     protected async onPlayerEnd(player: Player, track: LavaTrack, data: TrackEndEvent) {
-        console.debug('PLAYER END', player.guild, this.guild_id)
-        
         if (player.guild !== this.guild_id) return;
 
         if (data.reason === 'REPLACED') return;
@@ -295,7 +294,7 @@ export class SpotifyPlayer extends EventEmitter {
             this.player.pause(e.paused);
 
             for (const [_, user] of this.users) {
-                if (user.discord_id === this.host.discord_id) continue;
+                if (user.discord_id === this.host.discord_id || user.getState() !== 'ACTIVE') continue;
 
                 await (e.paused ? user.pausePlayback() : user.resumePlayback());
             }
@@ -316,7 +315,7 @@ export class SpotifyPlayer extends EventEmitter {
             await this.player.seek(this.spotify_to_yt(e.position));
 
             for (const [_, user] of this.users) {
-                if (user.discord_id === this.host.discord_id) continue;
+                if (user.discord_id === this.host.discord_id || user.getState() !== 'ACTIVE') continue;
 
                 await user.seekPlayback(e.position);
             }
@@ -342,63 +341,62 @@ export class SpotifyPlayer extends EventEmitter {
 
     // When a new track is played
     protected async onPlayTrack(user: SpotifyUser, paused: boolean, position: number, track: Track) {
-        if (this.host?.discord_id === user.discord_id) {
-            const search = `${track.metadata.authors.map((author_name) => author_name.name).join(', ')} - ${track.metadata.name}`;
-            const query = `ytsearch:${search}`;
+        if (this.host?.discord_id !== user.discord_id) return;
+        
+        const search = `${track.metadata.authors.map((author_name) => author_name.name).join(', ')} - ${track.metadata.name}`;
 
-            let track_list: LavaTrack[];
+        let track_list: LavaTrack[];
 
-            for (var i = 0; i < 3; i++) {
-                const result = await this.manager.search(search);
-                track_list = result.tracks;
+        for (var i = 0; i < 3; i++) {
+            const result = await this.manager.search(search);
+            track_list = result.tracks;
 
-                if (track_list.length > 0) break;
-            }
-
-            if (track_list.length < 1) {
-                await this.text_channel.send({
-                    embeds: [new MessageEmbed({
-                        description: `No track found for ${search}`,
-                        color: '#D61516'
-                    })]
-                });
-
-                console.debug(`No track found for ${search}`);
-
-                await user.advanceNext();
-
-                return;
-            }
-
-            this.player_info.youtube_track = track_list[0];
-            this.player_info.spotify_track = track;
-            this.player_info.position =  this.spotify_to_yt(position);
-            this.player_info.paused = paused;
-
-            for (const [_, user] of this.users) {
-                if (user.discord_id === this.host.discord_id) continue;
-
-                await user.playTrack(this.player_info.spotify_track.metadata.uri, position);
-            }
-
-            if (!paused) this.stopPlayerKickTimeout();
-            else if (!this.player_info.leave_timeout) this.startPlayerKickTimeout();
-
-            console.debug(`play-track = paused = ${paused}, position = ${position} (${this.player_info.position}), name = ${search}`);
-
-            await this.player.play(track_list[0], {startTime: this.spotify_to_yt(position)});
-
-            if (!paused) this.startPositionTimer();
-            else clearInterval(this.player_info.positionTimer);
-
-            if (paused) setTimeout(() => this.player.pause(true), 100);
+            if (track_list.length > 0) break;
         }
+
+        if (track_list.length < 1) {
+            await this.text_channel.send({
+                embeds: [new MessageEmbed({
+                    description: `No track found for ${search}`,
+                    color: '#D61516'
+                })]
+            });
+
+            console.debug(`No track found for ${search}`);
+
+            await user.advanceNext();
+
+            return;
+        }
+
+        this.player_info.youtube_track = track_list[0];
+        this.player_info.spotify_track = track;
+        this.player_info.position =  this.spotify_to_yt(position);
+        this.player_info.paused = paused;
+
+        for (const [_, user] of this.users) {
+            if (user.discord_id === this.host.discord_id || user.getState() !== 'ACTIVE') continue;
+
+            await user.playTrack(this.player_info.spotify_track.metadata.uri, position);
+        }
+
+        if (!paused) this.stopPlayerKickTimeout();
+        else if (!this.player_info.leave_timeout) this.startPlayerKickTimeout();
+
+        console.debug(`play-track = paused = ${paused}, position = ${position} (${this.player_info.position}), name = ${search}`);
+
+        await this.player.play(track_list[0], {startTime: this.spotify_to_yt(position)});
+
+        if (!paused) this.startPositionTimer();
+        else clearInterval(this.player_info.positionTimer);
+
+        if (paused) setTimeout(() => this.player.pause(true), 100);
     }
 
     protected startPositionTimer() {
         clearInterval(this.player_info.positionTimer);
         this.player_info.positionTimer = setInterval((() => {
-            if (!this.host) {
+            if (!this.host || !this.player_info) {
                 clearInterval(this.player_info.positionTimer);
                 return;
             }
@@ -439,7 +437,7 @@ export class SpotifyPlayer extends EventEmitter {
             if (this.player_info.is_247)
                 return;
 
-            this.music.leaveGuild(this.guild_id, true);
+            Spoticord.music_service.leaveGuild(this.guild_id, true);
         }).bind(this), 5 * 60 * 1000);
     }
 

@@ -1,19 +1,5 @@
 import * as dotenv from 'dotenv';
-import * as Discord from 'discord.js';
-import assert from 'assert';
-
-import { CommandEmitter } from './command/emitter';
-import CoreCommands from './command/core';
-import MusicCommands from './command/music';
-import { DB } from './db';
-import MongoPoweredDB from './db/mongo';
-import JSONPoweredDB from './db/json';
-import ConfigManager from './config';
-import MusicPlayerService from './services/music';
-import LinkerService from './services/linker';
-import { SpotifyWebHelper } from './services/spotify/user';
-import SpoticordRealtime from './services/realtime';
-import { Manager } from 'erela.js';
+import Spoticord from './services/spoticord';
 
 const _env = dotenv.config().parsed;
 
@@ -28,126 +14,116 @@ if (process.env.NODE_ENV === 'development') {
     })
 }
 
-const conf = new ConfigManager();
+Spoticord.initialize();
 
-if (conf.getDirty()) {
-    console.error("[FATAL] A dirty (or nonexistant) config.json file was found, please generate a new one");
-    assert(false, conf.getDirty());
-}
+// const conf = new ConfigManager();
 
-const dbConfig = conf.get('database');
+// if (conf.getDirty()) {
+//     console.error("[FATAL] A dirty (or nonexistant) config.json file was found, please generate a new one");
+//     assert(false, conf.getDirty());
+// }
 
-const client = new Discord.Client({ intents: [
-    Discord.Intents.FLAGS.GUILDS,
-    Discord.Intents.FLAGS.GUILD_MESSAGES,
-    Discord.Intents.FLAGS.GUILD_VOICE_STATES
-] });
+// const dbConfig = conf.get('database');
 
-const dbEngine: DB = dbConfig.strategy === 'mongo' ? new MongoPoweredDB(`mongodb://${dbConfig.username}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${dbConfig.port}/`, dbConfig.db) : new JSONPoweredDB(dbConfig.filename);
-const cmdEmitter = new CommandEmitter(conf, dbEngine);
-const musicService = new MusicPlayerService(conf, client, dbEngine);
-const linkerService = new LinkerService();
+// const client = new Discord.Client({ intents: [
+//     Discord.Intents.FLAGS.GUILDS,
+//     Discord.Intents.FLAGS.GUILD_MESSAGES,
+//     Discord.Intents.FLAGS.GUILD_VOICE_STATES
+// ] });
 
-client.on('ready', async () => {
+// const dbEngine: DB = dbConfig.strategy === 'mongo' ? new MongoPoweredDB(`mongodb://${dbConfig.username}:${encodeURIComponent(dbConfig.password)}@${dbConfig.host}:${dbConfig.port}/`, dbConfig.db) : new JSONPoweredDB(dbConfig.filename);
+// const cmdEmitter = new CommandEmitter(conf, dbEngine);
+// const musicService = new MusicPlayerService(conf, client, dbEngine);
+// const linkerService = new LinkerService();
 
-    await client.user.setActivity({
-        name: 'Spotify songs 🤪'
-    });
+// client.on('ready', async () => {
 
-    // Add command handlers
+//     await registerSlashCommands(conf, client);
 
-    const core = new CoreCommands(musicService);
-    cmdEmitter.addCommandHandler('link', core.link);
-    cmdEmitter.addCommandHandler('unlink', core.unlink);
-    cmdEmitter.addCommandHandler('rename', core.rename, 'name');
-    cmdEmitter.addCommandHandler('help', core.help, 'h');
+//     await client.user.setActivity({
+//         name: 'Spotify songs 🤪'
+//     });
 
-    const music = new MusicCommands(musicService);
-    cmdEmitter.addCommandHandler('join', music.join);
-    cmdEmitter.addCommandHandler('leave', music.leave, 'dc', 'kick', 'disconnect');
-    cmdEmitter.addCommandHandler('playing', music.playing, 'nowplaying', 'np');
-    cmdEmitter.addCommandHandler('24/7', music.stay, 'stay');
-    music.attachButtonHandlers(client);
+//     // Add command handlers
 
-    console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
+//     const core = new CoreCommands(musicService);
+//     cmdEmitter.addCommandHandler('link', core.link);
+//     cmdEmitter.addCommandHandler('unlink', core.unlink);
+//     cmdEmitter.addCommandHandler('rename', core.rename, 'name');
+//     cmdEmitter.addCommandHandler('help', core.help, 'h');
 
-    const nodes = conf.get('nodes');
+//     const music = new MusicCommands(musicService);
+//     cmdEmitter.addCommandHandler('join', music.join);
+//     cmdEmitter.addCommandHandler('leave', music.leave, 'dc', 'kick', 'disconnect');
+//     cmdEmitter.addCommandHandler('playing', music.playing, 'nowplaying', 'np');
+//     cmdEmitter.addCommandHandler('24/7', music.stay, 'stay');
+//     music.attachButtonHandlers(client);
 
-    const manager = new Manager({
-        nodes,
-        send(id, payload) {
-            const guild = client.guilds.cache.get(id);
-            guild && guild.shard.send(payload);
-        },
-        shards: 1
-    });
+//     console.log(`[INFO] Discord ready, starting Lavalink initialization...`);
 
-    manager.init(client.user.id);
+//     const nodes = conf.get('nodes');
 
-    console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
+//     const manager = new Manager({
+//         nodes,
+//         send(id, payload) {
+//             const guild = client.guilds.cache.get(id);
+//             guild && guild.shard.send(payload);
+//         },
+//         plugins: [
+//             new SpotifyPlugin({
+//                 clientID: conf.get('spotify_client_id'),
+//                 clientSecret: conf.get('spotify_client_secret')
+//             })
+//         ],
+//         shards: 1
+//     });
 
-    client.on('raw', d => manager.updateVoiceState(d));
+//     manager.init(client.user.id);
 
-    // I have not yet figured out a way to validate the client id and client secret without 
-    //  performing an oauth authorization grant, so this function won't check if these parameters are valid
-    musicService.initialize(manager);
-    SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
+//     console.log(`[INFO] Lavalink initialized, starting Spotify initialization...`);
 
-    if (conf.get('realtime')) {
-        console.log('[INFO] Spotify initialized, starting Realtime initialization...');
-        SpoticordRealtime.startRealtimeService(conf.get('realtime').port, conf.get('realtime').host, client, musicService);
-    }
+//     client.on('raw', d => manager.updateVoiceState(d));
 
-    console.log(`[INFO] Initialization completed`);
-});
+//     // I have not yet figured out a way to validate the client id and client secret without 
+//     //  performing an oauth authorization grant, so this function won't check if these parameters are valid
+//     musicService.initialize(manager);
+//     SpotifyWebHelper.init(dbEngine, conf.get('spotify_client_id'), conf.get('spotify_client_secret'));
 
-client.on('guildCreate', (guild) => {
-    console.log(`[INFO] Joined guild "${guild.name}"`);
-});
+//     if (conf.get('realtime')) {
+//         console.log('[INFO] Spotify initialized, starting Realtime initialization...');
+//         SpoticordRealtime.startRealtimeService(conf.get('realtime').port, conf.get('realtime').host, client, musicService);
+//     }
 
-client.on('guildDelete', (guild) => {
-    console.log(`[INFO] Left guild "${guild.name}"`);
-});
+//     console.log(`[INFO] Initialization completed`);
+// });
 
-client.on('error', (error) => {
-    console.error('[DISCORD ERROR]');
-    console.error(error);
-});
+// client.on('guildCreate', (guild) => {
+//     console.log(`[INFO] Joined guild "${guild.name}"`);
+// });
 
-client.on('message', (msg) => {
-    if (!msg.guild) return;
-    if (!msg.content.startsWith(conf.get('prefix'))) return;
+// client.on('guildDelete', (guild) => {
+//     console.log(`[INFO] Left guild "${guild.name}"`);
+// });
 
-    const args = msg.content.substr(1).split(' ');
-    const cmd = args.shift().toLowerCase();
+// client.on('error', (error) => {
+//     console.error('[DISCORD ERROR]');
+//     console.error(error);
+// });
 
-    console.debug(`[CMD] ${cmd} -> ${args.map(a => `"${a}"`).join(' ')}`)
+// client.on('message', (msg) => {
+//     if (!msg.guild) return;
+//     if (!msg.content.startsWith(conf.get('prefix'))) return;
 
-    cmdEmitter.emit(cmd, args, msg);
-});
+//     const args = msg.content.substr(1).split(' ');
+//     const cmd = args.shift().toLowerCase();
 
-dbEngine.initialize().then((success) => {
-    if (!success) {
-        console.error(`[FATAL] DB Initialization failed`);
-        process.exit(-1);
-    }
+//     console.debug(`[CMD] ${cmd} -> ${args.map(a => `"${a}"`).join(' ')}`)
 
-    console.log(`[INFO] Database initialized, starting Linking service...`);
-
-    linkerService.initialize(conf, dbEngine).then((success) => {
-        if (!success) {
-            console.error(`[FATAL] Linking service initialization failed`);
-            process.exit(-1);
-        }
-
-        console.log(`[INFO] Linker service initialized, starting Discord initialization...`);
-
-        client.login(conf.get('token'));
-    });
-});
+//     cmdEmitter.emit(cmd, args, msg);
+// });
 
 process.on('SIGINT', () => {
     console.log('[SIGINT] Shutting down...');
-    client.destroy();
+    Spoticord.destroy();
     process.exit();
 });

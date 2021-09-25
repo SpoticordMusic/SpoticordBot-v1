@@ -325,6 +325,42 @@ export class SpotifyStateManager {
         return true;
     }
 
+    public async setActiveDevice(device_ids: string[]) {
+        let response = await axios.put('https://api.spotify.com/v1/me/player', {
+            device_ids
+        }, {
+            headers: {
+                Authorization: `Bearer ${this.token.access_token}`
+            },
+            validateStatus: () => true
+        });
+
+        if (response.status >= 400) {
+            if (response.status === 404) return false;
+
+            if (!await this.refreshAccessToken()) {
+                console.debug('refreshAccessToken[/play] failed');
+                return false;
+            }
+
+            response = await axios.put('https://api.spotify.com/v1/me/player', {
+                device_ids
+            }, {
+                headers: {
+                    Authorization: `Bearer ${this.token.access_token}`
+                },
+                validateStatus: () => true
+            });
+
+            if (response.status >= 400) {
+                console.debug('/play failed');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public async seekTo(position: number): Promise<boolean> {
         let response = await axios.put(`https://api.spotify.com/v1/me/player/seek?position_ms=${position}`, {}, {
             headers: {

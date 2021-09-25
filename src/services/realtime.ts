@@ -2,16 +2,13 @@ import { Client } from "discord.js";
 import MusicPlayerService from "./music";
 import express, { Express, Request, Response } from 'express';
 import {json} from 'body-parser';
+import Spoticord from "./spoticord";
 
 export default class SpoticordRealtime {
   private static app: Express;
-  private static discord: Client;
-  private static music: MusicPlayerService;
 
-  public static startRealtimeService(port: number, host: string, discord: Client, music: MusicPlayerService): void {
+  public static startRealtimeService(port: number, host: string): void {
     this.app = express();
-    this.discord = discord;
-    this.music = music;
 
     this.app.use(json({limit: '5mb'}));
 
@@ -28,26 +25,26 @@ export default class SpoticordRealtime {
 
   private static getServerCount(req: Request, res: Response) {
     res.json({
-      count: this.discord.guilds.cache.size
+      count: Spoticord.client.guilds.cache.size
     });
   }
 
   private static getServers(req: Request, res: Response) {
     res.json({
-      servers: this.discord.guilds.cache.map(guild => guild.id)
+      servers: Spoticord.client.guilds.cache.map(guild => guild.id)
     });
   }
 
   private static getServer(req: Request, res: Response) {
     if (!req.params.id) return res.status(400).json({error: 'Invalid request'});
 
-    const guild = this.discord.guilds.cache.get(req.params.id);
+    const guild = Spoticord.client.guilds.cache.get(req.params.id);
     res.status(guild ? 200 : 404).json(guild ?? {error: 'Guild not found'});
   }
 
   private static getPlayerCount(req: Request, res: Response) {
     res.json({
-      count: this.music.getPlayers().length
+      count: Spoticord.music_service.getPlayers().length
     });
   }
 
@@ -57,7 +54,7 @@ export default class SpoticordRealtime {
     let success = []
     let fail = []
 
-    for (const player of this.music.getPlayers()) {
+    for (const player of Spoticord.music_service.getPlayers()) {
       try {
         if (typeof req.body.content === 'string') {
           await player.text_channel?.send(req.body.content);

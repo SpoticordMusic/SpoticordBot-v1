@@ -5,13 +5,15 @@ import { SpotifyPlayer } from "./spotify/player";
 import { Track } from "./spotify/state";
 import { SpotifyUser } from "./spotify/user";
 import { Track as LavaTrack, Manager } from 'erela.js';
+import Spoticord from "./spoticord";
 
 type MusicPlayerState = 'DISCONNECTED' | 'INACTIVE' | 'PAUSED' | 'PLAYING';
-type UserState = 'INACTIVE' | 'ACTIVE';
+type UserState = 'INACTIVE' | 'INITIALIZED' | 'ACTIVE';
 
 export default class MusicPlayerService {
     private spotify_client_id: string;
     private spotify_client_secret: string;
+    private botID: string;
 
     private manager: Manager;
 
@@ -19,21 +21,17 @@ export default class MusicPlayerService {
     private users: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
     private update_ignore: Map<string, boolean> = new Map<string, boolean>();
 
-    constructor(config: ConfigManager, private client: Client, private db: DB) {
-        this.spotify_client_id = config.get('spotify_client_id');
-        this.spotify_client_secret = config.get('spotify_client_secret');
-    
-        this.onVoiceStateUpdate = this.onVoiceStateUpdate.bind(this);
-    }
-
-    public initialize(manager: Manager) {
-        this.client.on('voiceStateUpdate', this.onVoiceStateUpdate);
-
+    constructor(manager: Manager) {
+        this.spotify_client_id = Spoticord.config.get('spotify_client_id');
+        this.spotify_client_secret = Spoticord.config.get('spotify_client_secret');
+        this.botID = Spoticord.client.user.id;
         this.manager = manager;
+    
+        Spoticord.client.on('voiceStateUpdate', this.onVoiceStateUpdate.bind(this));
     }
 
     protected async onVoiceStateUpdate(oldState: VoiceState, newState: VoiceState) {
-        if (oldState.id === this.client.user.id) {
+        if (oldState.id === this.botID) {
             if (this.update_ignore.has(oldState.guild.id) && this.update_ignore.get(oldState.guild.id)) {
                 this.update_ignore.set(oldState.guild.id, false);
                 return;
@@ -94,8 +92,14 @@ export default class MusicPlayerService {
         return this.players.get(guild_id).getHost();
     }
 
+    public getUser(user_id: string): SpotifyUser | null {
+        if (!this.users.has(user_id)) return null;
+
+        return this.users.get(user_id);
+    }
+
     public getUserState(user_id: string): UserState {
-        return this.users.has(user_id) ? 'ACTIVE' : 'INACTIVE';
+        return this.users.has(user_id) ? this.users.get(user_id).getState() : 'INACTIVE';
     }
 
     public toggle247(guild_id: string): boolean {
@@ -115,7 +119,7 @@ export default class MusicPlayerService {
     public createUser(user_id: string): SpotifyUser {
         if (this.users.has(user_id)) return this.users.get(user_id);
 
-        const spotifyUser = new SpotifyUser(user_id, this.db, this.spotify_client_id, this.spotify_client_secret);
+        const spotifyUser = new SpotifyUser(user_id, Spoticord.database, this.spotify_client_id, this.spotify_client_secret);
     
         this.users.set(user_id, spotifyUser);
 
@@ -135,7 +139,7 @@ export default class MusicPlayerService {
     public async joinChannel(guild_id: string, voice_channel: VoiceChannel, text_channel: TextChannel): Promise<SpotifyPlayer> {
         if (this.players.has(guild_id)) return this.players.get(guild_id);
 
-        const player = new SpotifyPlayer(guild_id, voice_channel, text_channel, this.client, this, this.db);
+        const player = new SpotifyPlayer(guild_id, voice_channel, text_channel);
 
         await player.join();
 
@@ -176,7 +180,7 @@ export default class MusicPlayerService {
     }
 
     public getDiscordUser(discord_id: string): User | null {
-        return this.client.users.cache.get(discord_id)
+        return Spoticord.client.users.cache.get(discord_id)
     }
 
     public getPlayers(): SpotifyPlayer[] {
