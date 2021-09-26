@@ -27,14 +27,16 @@ import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
 import { SlashCommandBuilder } from "@discordjs/builders";
 
-interface ICommand {
+export interface ICommand {
   data: SlashCommandBuilder;
   execute: (params: ICommandExec) => void;
   button?: (interaction: ButtonInteraction) => void;
+  requires?: ('guild')[]
 }
 
 export interface ICommandExec {
   user: User;
+  guild: Guild,
   member: GuildMember;
   source: "chat" | "interaction";
   channel: TextBasedChannels;
@@ -85,11 +87,10 @@ export default class Spoticord {
     }
 
     this.client = new Client({
-      intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES],
+      intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_VOICE_STATES],
     });
 
     this.client.on("ready", this.onClientReady);
-    this.client.on("message", this.onClientMessage.bind(this));
     this.client.on("interactionCreate", this.onInteraction.bind(this));
     this.client.on("guildCreate", this.onGuildJoined);
     this.client.on("guildDelete", this.onGuildLeft);
@@ -182,41 +183,43 @@ export default class Spoticord {
     }
   }
 
-  private static async onClientMessage(message: Message) {
-    if (!message.guild) return;
-    if (!message.content.startsWith(this.config.get("prefix"))) return;
-
-    const args = message.content.substr(1).split(" ");
-    const cmd = args.shift().toLowerCase();
-
-    console.debug(`[CMD] ${cmd} -> ${args.map((a) => `"${a}"`).join(" ")}`);
-
-    const command = this.commands.get(cmd);
-    if (!command) return;
-
-    if (command.data.options.length > 1) return;
-
-    command.execute({
-      user: message.author,
-      member: message.member,
-      source: 'chat',
-      reply: (...params): Promise<void> => {
-        return new Promise(resolve => {
-          message.reply(...params).then(() => resolve());
-        });
-      },
-      channel: message.channel,
-      options: new Map(command.data.options.length ? [[command.data.options[0].toJSON().name, args.join(' ')]] : [])
-    })
-  }
+  private static readonly GUILD_REQ_RESPONSES = [
+    'Please I beg you please to run this command in a server :pray:',
+    'Dude are you fr trying to run this command in DMs??',
+    ':clown:',
+    'A fatal error has occured while trying to execute this command: **Run this command in a server!**',
+    '*Hey psst? Can I tell you a secret? Okay, so I heard the other day that this command must be run inside a server :open_mouth:*',
+    'Which server bro?',
+    'Hey hello yes I just heard that you found an easter egg, oh and I also heard you should **EXECUTE THIS COMMAND IN A SERVER**',
+    'Sup',
+    '?????????????????',
+    'Yo if you know any more "funny" responses please tell me :>',
+    'Wie dit leest is gek',
+    'Shoutout to everyone who sees this on GitHub before they receive this from the bot!',
+    'You sending this command in DMs is like as useful as throwing a brick into a burning building',
+    'Have you heard about this **AMAZING NEW FEATURE** called **SERVERS**?? YES!! They exist! And maybe you should execute this command in one!'
+  ]
 
   private static async onInteraction(interaction: Interaction) {
     if (interaction.isCommand()) {
       const command = this.commands.get(interaction.commandName);
       if (!command) return;
 
+      if (command.requires?.includes('guild') && !interaction.guild) {
+        return await interaction.reply({
+          content: Spoticord.GUILD_REQ_RESPONSES[Math.floor(Math.random() * Spoticord.GUILD_REQ_RESPONSES.length)]
+        })
+      }
+
+      if (command.requires?.includes('guild') && !interaction.member) {
+        return await interaction.reply({
+          content: 'Fatal error: Command requires guild, guild was provided but member is undefined?! **please report this!**'
+        });
+      }
+
       command.execute({
         user: interaction.user,
+        guild: interaction.guild,
         member: interaction.member as GuildMember,
         source: "interaction",
         reply: interaction.reply.bind(interaction),

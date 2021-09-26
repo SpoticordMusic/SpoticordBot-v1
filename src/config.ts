@@ -11,7 +11,6 @@ export default class ConfigManager {
             this.config = new Map(Object.entries(JSON.parse(buf)));
 
             assert(this.config.has('token'), 'Missing field: token');
-            assert(this.config.has('prefix'), 'Missing field: prefix');
 
             assert(this.config.has('spotify_client_id'), 'Missing field: spotify_client_id');
             assert(this.config.has('spotify_client_secret'), 'Missing field: spotify_client_secret');

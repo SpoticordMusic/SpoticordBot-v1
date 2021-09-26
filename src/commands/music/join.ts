@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { MessageEmbed, TextChannel, VoiceChannel } from "discord.js";
-import Spoticord, { ICommandExec } from "../../services/spoticord";
+import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 
 async function execute({member, user, channel, reply}: ICommandExec)
 {
@@ -50,7 +50,8 @@ async function execute({member, user, channel, reply}: ICommandExec)
   }
 
   if (Spoticord.music_service.getPlayerState(member.guild.id) === 'DISCONNECTED') {
-    await Spoticord.music_service.joinChannel(member.guild.id, member.voice.channel as VoiceChannel, channel as TextChannel);
+    //await Spoticord.music_service.joinChannel(member.guild.id, member.voice.channel as VoiceChannel, channel as TextChannel);
+    await Spoticord.music_service.joinWithProvider(member.guild.id, member.voice.channelId, channel.id);
 
     return await reply({
       embeds: [new MessageEmbed({
@@ -101,5 +102,6 @@ export default {
   data: new SlashCommandBuilder()
     .setName('join')
     .setDescription('Request the bot to join the current voice channel'),
-  execute
-}
+  execute,
+  requires: ['guild']
+} as ICommand;

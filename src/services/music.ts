@@ -6,6 +6,7 @@ import { Track } from "./spotify/state";
 import { SpotifyUser } from "./spotify/user";
 import { Track as LavaTrack, Manager } from 'erela.js';
 import Spoticord from "./spoticord";
+import GenericPlayer from "./spotify/generic_player";
 
 type MusicPlayerState = 'DISCONNECTED' | 'INACTIVE' | 'PAUSED' | 'PLAYING';
 type UserState = 'INACTIVE' | 'INITIALIZED' | 'ACTIVE';
@@ -18,6 +19,7 @@ export default class MusicPlayerService {
     private manager: Manager;
 
     private players: Map<string, SpotifyPlayer> = new Map<string, SpotifyPlayer>();
+    private generic_players: Map<string, SpotifyPlayer> = new Map<string, SpotifyPlayer>();
     private users: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
     private update_ignore: Map<string, boolean> = new Map<string, boolean>();
 
@@ -146,6 +148,12 @@ export default class MusicPlayerService {
         this.players.set(guild_id, player);
 
         return player;
+    }
+
+    public async joinWithProvider(guild: string, voice: string, text: string) {
+        if (this.generic_players.has(guild)) return this.generic_players.get(guild);
+
+        GenericPlayer.create(guild, voice);
     }
 
     public async leaveGuild(guild_id: string, afk: boolean = false) {

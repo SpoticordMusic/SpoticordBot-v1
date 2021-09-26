@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { ButtonInteraction, Message, MessageActionRow, MessageButton, MessageEmbed } from "discord.js";
-import Spoticord, { ICommandExec } from "../../services/spoticord";
+import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 import { promisify } from "util";
 
 const wait = promisify(setTimeout);
@@ -251,4 +251,5 @@ export default {
   data: new SlashCommandBuilder().setName("playing").setDescription("Display which song is currently being played"),
   execute,
   button,
-};
+  requires: ['guild']
+} as ICommand;

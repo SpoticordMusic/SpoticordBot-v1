@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { MessageEmbed } from "discord.js";
-import Spoticord, { ICommandExec } from "../../services/spoticord";
+import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 
 async function execute({ member, reply }: ICommandExec) {
   if (Spoticord.music_service.getPlayerState(member.guild.id) === "DISCONNECTED") {
@@ -57,4 +57,5 @@ export default {
     .setName("leave")
     .setDescription("Request the bot to leave the voice channel it is currently in"),
   execute,
-};
+  requires: ['guild']
+} as ICommand;

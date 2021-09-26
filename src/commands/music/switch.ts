@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { MessageEmbed } from 'discord.js'
-import Spoticord, { ICommandExec } from '../../services/spoticord'
+import Spoticord, { ICommand, ICommandExec } from '../../services/spoticord'
 
-async function execute({ member, reply }: ICommandExec) {
-  if (Spoticord.music_service.getPlayerState(member.guild.id) === "DISCONNECTED") {
+async function execute({ guild, member, reply }: ICommandExec) {
+  if (Spoticord.music_service.getPlayerState(guild.id) === "DISCONNECTED") {
     return await reply({
       embeds: [
         new MessageEmbed({
@@ -85,5 +85,6 @@ export default {
   data: new SlashCommandBuilder()
     .setName("switch")
     .setDescription("Switch your Spotify playback to Spoticord"),
-  execute
-};
+  execute,
+  requires: ['guild']
+} as ICommand;
