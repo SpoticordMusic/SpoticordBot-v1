@@ -1,8 +1,6 @@
-import { Client, MessageEmbed, TextChannel, VoiceChannel } from "discord.js";
+import { MessageEmbed, TextChannel, VoiceChannel } from "discord.js";
 import { Player, Track as LavaTrack, TrackEndEvent, Manager } from "erela.js";
 import EventEmitter from "events";
-import { DB } from "../../db";
-import MusicPlayerService from "../music";
 import Spoticord from "../spoticord";
 import { Track } from "./state";
 import { SpotifyUser } from "./user";
@@ -58,7 +56,7 @@ export class SpotifyPlayer extends EventEmitter {
         this.startPlayerKickTimeout = this.startPlayerKickTimeout.bind(this);
         this.stopPlayerKickTimeout = this.stopPlayerKickTimeout.bind(this);
 
-        this.manager = Spoticord.music_service.getLavaManager();
+        // this.manager = Spoticord.music_service.getLavaManager();
     }
 
     public async join() {
@@ -75,7 +73,7 @@ export class SpotifyPlayer extends EventEmitter {
         // Remove redundant onend event handlers (idk how the lavalink lib works but without the 'off' it breaks the bot after moving it)
         this.manager.off('queueEnd', this.onPlayerEnd).on('queueEnd', this.onPlayerEnd);
 
-        await this.player.setVolume(40);
+        this.player.setVolume(40);
 
         const members = this.voice_channel.members;
     
@@ -415,7 +413,7 @@ export class SpotifyPlayer extends EventEmitter {
         return (position / this.player_info.youtube_track?.duration) * this.player_info.spotify_track?.metadata.duration;
     }
 
-    // Triggers when the "do not kick" criteria no applies
+    // Triggers when the "do not kick" criteria no longer applies
     protected updatePlayerKickTimeout() {
         if (this.player_info.is_247 || this.voice_channel.members.size == 2) {
             this.stopPlayerKickTimeout();

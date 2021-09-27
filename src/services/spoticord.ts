@@ -1,4 +1,5 @@
 import {
+  ApplicationCommand,
   ButtonInteraction,
   Client,
   CommandInteraction,
@@ -26,17 +27,19 @@ import fs from "fs";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
 import { SlashCommandBuilder } from "@discordjs/builders";
+import { ISCProvider } from "./provider";
+import { APIApplicationCommandOption } from "@discordjs/builders/node_modules/discord-api-types";
 
 export interface ICommand {
   data: SlashCommandBuilder;
   execute: (params: ICommandExec) => void;
   button?: (interaction: ButtonInteraction) => void;
-  requires?: ('guild')[]
+  requires?: "guild"[];
 }
 
 export interface ICommandExec {
   user: User;
-  guild: Guild,
+  guild: Guild;
   member: GuildMember;
   source: "chat" | "interaction";
   channel: TextBasedChannels;
@@ -51,6 +54,9 @@ export default class Spoticord {
 
   public static music_service: MusicPlayerService;
   public static linker_service: LinkerService;
+  public static provider: ISCProvider;
+
+  private static providerContructor: new () => ISCProvider;
 
   private static commands: Map<string, ICommand>;
 
@@ -58,7 +64,9 @@ export default class Spoticord {
     return this.config.get("token");
   }
 
-  public static async initialize() {
+  public static async initialize<T extends ISCProvider>(provider: new () => T) {
+    this.providerContructor = provider;
+
     this.onClientReady = this.onClientReady.bind(this);
 
     this.config = new ConfigManager();
@@ -117,23 +125,13 @@ export default class Spoticord {
       name: "Spotify songs 🤪",
     });
 
-    console.log("[INFO] Discord ready, starting Lavalink initialization...");
+    console.log("[INFO] Discord ready, starting Provider initialization...");
 
-    const manager = new Manager({
-      nodes: this.config.get("nodes") as NodeOptions[],
-      send: (id, payload) => {
-        const guild = this.client.guilds.cache.get(id);
-        guild && guild.shard.send(payload);
-      },
-      shards: 1,
-    });
-
-    manager.init(this.client.user.id);
-    this.client.on("raw", (d) => manager.updateVoiceState(d));
+    this.provider = new this.providerContructor();
 
     console.log(`[INFO] Lavalink initialized, starting Spotify initialization`);
 
-    this.music_service = new MusicPlayerService(manager);
+    this.music_service = new MusicPlayerService();
 
     if (this.config.get("realtime")) {
       console.log("[INFO] Spotify initialized, starting Realtime server...");
@@ -172,48 +170,88 @@ export default class Spoticord {
     try {
       console.log("[INFO] Start refresh of slash commands");
 
-      await rest.put(
-        Routes.applicationCommands(
-          this.client.user.id
-        ) /* what the fuck TypeScript?? */ as unknown as `/${string}`,
-        { body: commands }
-      );
+      let requiredCommands = [...this.commands.values()];
+
+      const resp = (await rest.get(Routes.applicationCommands(this.client.user.id))) as {
+        name: string;
+        description: string;
+        options: APIApplicationCommandOption[];
+      }[];
+
+      let needsRefresh = false;
+
+      for (const remoteCommand of resp) {
+        const reqCommand = requiredCommands.filter((e) => e.data.name === remoteCommand.name)[0];
+        if (reqCommand) {
+          if ((reqCommand.data.options || []).length !== (remoteCommand.options || []).length) {
+            needsRefresh = true;
+            break;
+          }
+
+          if (remoteCommand.options) {
+            for (const option of remoteCommand.options) {
+              const localOption = reqCommand.data.options.filter((o) => o.toJSON().name === option.name)[0]?.toJSON();
+
+              if (!localOption) {
+                needsRefresh = true;
+                break;
+              }
+
+              if (localOption.name !== option.name || localOption.type !== option.type || localOption.description !== option.description || localOption.required !== option.required || localOption.default !== option.default)
+              {
+                needsRefresh = true;
+                break;
+              }
+            }
+          }
+        } else {
+          needsRefresh = true;
+          break;
+        }
+      }
+
+      if (needsRefresh) {
+        await rest.put(
+          Routes.applicationCommands(this.client.user.id) /* what the fuck TypeScript?? */ as unknown as `/${string}`,
+          { body: commands }
+        );
+      }
     } catch (error) {
       throw error;
     }
   }
 
   private static readonly GUILD_REQ_RESPONSES = [
-    'Please I beg you please to run this command in a server :pray:',
-    'Dude are you fr trying to run this command in DMs??',
-    ':clown:',
-    'A fatal error has occured while trying to execute this command: **Run this command in a server!**',
-    '*Hey psst? Can I tell you a secret? Okay, so I heard the other day that this command must be run inside a server :open_mouth:*',
-    'Which server bro?',
-    'Hey hello yes I just heard that you found an easter egg, oh and I also heard you should **EXECUTE THIS COMMAND IN A SERVER**',
-    'Sup',
-    '?????????????????',
+    "Please I beg you please to run this command in a server :pray:",
+    "Dude are you fr trying to run this command in DMs??",
+    ":clown:",
+    "A fatal error has occured while trying to execute this command: **Run this command in a server!**",
+    "*Hey psst? Can I tell you a secret? Okay, so I heard the other day that this command must be run inside a server :open_mouth:*",
+    "Which server bro?",
+    "Hey hello yes I just heard that you found an easter egg, oh and I also heard you should **EXECUTE THIS COMMAND IN A SERVER**",
+    "Sup",
+    "?????????????????",
     'Yo if you know any more "funny" responses please tell me :>',
-    'Wie dit leest is gek',
-    'Shoutout to everyone who sees this on GitHub before they receive this from the bot!',
-    'You sending this command in DMs is like as useful as throwing a brick into a burning building',
-    'Have you heard about this **AMAZING NEW FEATURE** called **SERVERS**?? YES!! They exist! And maybe you should execute this command in one!'
-  ]
+    "Wie dit leest is gek",
+    "Shoutout to everyone who sees this on GitHub before they receive this from the bot!",
+    "You sending this command in DMs is like as useful as throwing a brick into a burning building",
+    "Have you heard about this **AMAZING NEW FEATURE** called **SERVERS**?? YES!! They exist! And maybe you should execute this command in one!",
+  ];
 
   private static async onInteraction(interaction: Interaction) {
     if (interaction.isCommand()) {
       const command = this.commands.get(interaction.commandName);
       if (!command) return;
 
-      if (command.requires?.includes('guild') && !interaction.guild) {
+      if (command.requires?.includes("guild") && !interaction.guild) {
         return await interaction.reply({
-          content: Spoticord.GUILD_REQ_RESPONSES[Math.floor(Math.random() * Spoticord.GUILD_REQ_RESPONSES.length)]
-        })
+          content: Spoticord.GUILD_REQ_RESPONSES[Math.floor(Math.random() * Spoticord.GUILD_REQ_RESPONSES.length)],
+        });
       }
 
-      if (command.requires?.includes('guild') && !interaction.member) {
+      if (command.requires?.includes("guild") && !interaction.member) {
         return await interaction.reply({
-          content: 'Fatal error: Command requires guild, guild was provided but member is undefined?! **please report this!**'
+          content: "Fatal error: Command requires guild, guild was provided but member is undefined?! **please report this!**",
         });
       }
 

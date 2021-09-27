@@ -16,19 +16,16 @@ export default class MusicPlayerService {
     private spotify_client_secret: string;
     private botID: string;
 
-    private manager: Manager;
-
     private players: Map<string, SpotifyPlayer> = new Map<string, SpotifyPlayer>();
-    private generic_players: Map<string, SpotifyPlayer> = new Map<string, SpotifyPlayer>();
+    private generic_players: Map<string, GenericPlayer> = new Map<string, GenericPlayer>();
     private users: Map<string, SpotifyUser> = new Map<string, SpotifyUser>();
     private update_ignore: Map<string, boolean> = new Map<string, boolean>();
 
-    constructor(manager: Manager) {
+    constructor() {
         this.spotify_client_id = Spoticord.config.get('spotify_client_id');
         this.spotify_client_secret = Spoticord.config.get('spotify_client_secret');
         this.botID = Spoticord.client.user.id;
-        this.manager = manager;
-    
+        
         Spoticord.client.on('voiceStateUpdate', this.onVoiceStateUpdate.bind(this));
     }
 
@@ -70,10 +67,6 @@ export default class MusicPlayerService {
                 await player.userJoined(newState.id);
             }
         }
-    }
-
-    public getLavaManager(): Manager {
-        return this.manager;
     }
 
     public getPlayerState(guild_id: string): MusicPlayerState {
@@ -153,7 +146,11 @@ export default class MusicPlayerService {
     public async joinWithProvider(guild: string, voice: string, text: string) {
         if (this.generic_players.has(guild)) return this.generic_players.get(guild);
 
-        GenericPlayer.create(guild, voice);
+        const player = await GenericPlayer.create(guild, voice, text);
+    
+        this.generic_players.set(guild, player);
+
+        return player;
     }
 
     public async leaveGuild(guild_id: string, afk: boolean = false) {

@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv';
+import LavalinkMusicProvider from './providers/lavalink/LavalinkMusicProvider';
 import Spoticord from './services/spoticord';
 
 const _env = dotenv.config().parsed;
@@ -14,7 +15,7 @@ if (process.env.NODE_ENV === 'development') {
     })
 }
 
-Spoticord.initialize();
+Spoticord.initialize(LavalinkMusicProvider);
 
 process.on('SIGINT', () => {
     console.log('[SIGINT] Shutting down...');

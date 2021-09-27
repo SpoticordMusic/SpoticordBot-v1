@@ -31,12 +31,12 @@ export default class ConfigManager {
                 });
             }
 
-            assert(this.config.has('nodes'), 'Missing field: nodes');
+            // assert(this.config.has('nodes'), 'Missing field: nodes');
 
-            const nodes = this.config.get('nodes');
+            // const nodes = this.config.get('nodes');
 
-            assert(Array.isArray(nodes), 'Dirty field: nodes');
-            assert(nodes.length, 'Dirty field: nodes');
+            // assert(Array.isArray(nodes), 'Dirty field: nodes');
+            // assert(nodes.length, 'Dirty field: nodes');
 
             if (this.config.has('realtime')) {
                 const realtime = this.config.get('realtime');
