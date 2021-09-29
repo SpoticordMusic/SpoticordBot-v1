@@ -89,6 +89,10 @@ export default class LavalinkMusicPlayer implements ISCPlayer {
     this.player.stop();
   }
 
+  public setVolume(volume: number) {
+    this.player.setVolume(Math.min(150, Math.max(0, volume / 65535 * 40)));
+  }
+
   public getPosition() {
     let position = this.player.position;
     if (this.overridePosition > -1 && !position) {

@@ -104,6 +104,7 @@ export default class GenericPlayer {
     dealer.on("resume", this.onResume.bind(this, user));
     dealer.on("seek", this.onSeek.bind(this, user));
     dealer.on("stop", this.onStop.bind(this, user));
+    dealer.on('volume', this.onVolumeChanged.bind(this, user));
     dealer.on("fetch-pos", this.onFetchPosition.bind(this, user));
 
     Spoticord.music_service.onUserOnline(user.userId, this);
@@ -194,6 +195,12 @@ export default class GenericPlayer {
     }
   }
 
+  private onVolumeChanged(user: GenericUser, volume: number) {
+    if (!user || this.host !== user) return;
+
+    this.player.setVolume(volume);
+  }
+
   private onFetchPosition(user: GenericUser, resolve: (pos: number) => void) {
     this.player.getPosition().then(resolve);
   }
@@ -204,7 +211,7 @@ export default class GenericPlayer {
 
   // Start the player kick timer
   protected tryStartPlayerKickTimeout() {
-    if (this.stayForever || (this.voice.members.size === 2)) {
+    if (this.stayForever || this.voice.members.size === 2) {
       this.stopPlayerKickTimeout();
       return;
     }
@@ -216,12 +223,12 @@ export default class GenericPlayer {
 
       if (this.stayForever) return;
 
-      Spoticord.music_service.leaveGuild(this.guildId, true);
+      Spoticord.music_service.leaveGuild(this.guildId, 'AFK');
     }, 5 * 60 * 1000);
   }
 
   // Cancel the player kick timer
-  protected stopPlayerKickTimeout() {
+  private stopPlayerKickTimeout() {
     if (!this.kickTimeout) return;
 
     clearTimeout(this.kickTimeout);
@@ -234,10 +241,16 @@ export default class GenericPlayer {
     return [...this.users.values()].filter((u) => nohost && u.userId !== this.host?.userId && u.state === "ACTIVE");
   }
 
-  public advanceNext() {
+  public advanceNext(skipped: boolean = false) {
     if (!this.host) return;
 
-    this.host.dealer.nextTrack(false);
+    this.host.dealer.nextTrack(skipped);
+  }
+
+  public advancePrevious() {
+    if (!this.host) return;
+
+    this.host.dealer.previousTrack();
   }
 
   public async destroy() {

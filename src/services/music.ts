@@ -1,10 +1,10 @@
-import { MessageEmbed, VoiceState } from "discord.js";
+import { Message, MessageEmbed, VoiceState } from "discord.js";
 import Spoticord from "./spoticord";
 import GenericPlayer from "./generic/player";
 
 export default class MusicPlayerService {
-  private generic_players: Map<string, GenericPlayer> = new Map<string, GenericPlayer>();
-  private generic_users: Map<string, GenericPlayer> = new Map<string, GenericPlayer>();
+  private players: Map<string, GenericPlayer> = new Map<string, GenericPlayer>();
+  private users: Map<string, GenericPlayer> = new Map<string, GenericPlayer>();
 
   //private update_ignore: Map<string, boolean> = new Map<string, boolean>();
 
@@ -21,25 +21,25 @@ export default class MusicPlayerService {
 
       if (oldState.channelId && !newState.channelId) {
         // Bot LEFT voice channel
-        if (this.generic_players.has(oldState.guild.id)) {
-          await this.generic_players.get(oldState.guild.id).destroy();
+        if (this.players.has(oldState.guild.id)) {
+          await this.players.get(oldState.guild.id).destroy();
 
-          this.generic_players.delete(oldState.guild.id);
+          this.players.delete(oldState.guild.id);
         }
       } else if (oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId) {
         // Bot MOVED voice channel
         // Due to a bug in a library used for the Lavalink provider moving the bot is not yet supported
 
         // TODO: Move player instead of killing it
-        await this.generic_players.get(newState.guild.id).destroy();
+        await this.players.get(newState.guild.id).destroy();
       }
 
       return;
     }
 
-    if (this.generic_players.has(oldState.guild.id)) {
+    if (this.players.has(oldState.guild.id)) {
       // Old state was in a guild where music is playing
-      const player = this.generic_players.get(oldState.guild.id);
+      const player = this.players.get(oldState.guild.id);
 
       if (player.voiceId === oldState.channelId && player.voiceId !== newState.channelId) {
         // User got out of channel with bot
@@ -47,8 +47,8 @@ export default class MusicPlayerService {
       }
     }
 
-    if (this.generic_players.has(newState.guild.id)) {
-      const player = this.generic_players.get(newState.guild.id);
+    if (this.players.has(newState.guild.id)) {
+      const player = this.players.get(newState.guild.id);
 
       if (player.voiceId === newState.channelId && player.voiceId !== oldState.channelId) {
         await player.onUserVoiceJoined(newState.id);
@@ -57,15 +57,15 @@ export default class MusicPlayerService {
   }
 
   public onUserOnline(user: string, player: GenericPlayer) {
-    this.generic_users.set(user, player);
+    this.users.set(user, player);
   }
 
   public onUserOffline(user: string) {
-    this.generic_users.delete(user);
+    this.users.delete(user);
   }
 
   public async onDeviceRenamed(user: string, name: string) {
-    const player = this.generic_users.get(user);
+    const player = this.users.get(user);
     if (!player) return;
 
     const gUser = player.getUser(user);
@@ -73,62 +73,67 @@ export default class MusicPlayerService {
   }
 
   public userIsOnline(user: string) {
-    return this.generic_users.has(user);
+    return this.users.has(user);
   }
 
   public playerIsOnline(guild: string) {
-    return this.generic_players.has(guild);
+    return this.players.has(guild);
   }
 
   public getPlayer(guild: string): GenericPlayer | undefined {
-    return this.generic_players.get(guild) || undefined;
+    return this.players.get(guild) || undefined;
   }
 
   public getPlayers() {
-    return [...this.generic_players.values()];
+    return [...this.players.values()];
   }
 
   public async playerUserJoin(guild: string, user: string) {
-    const player = this.generic_players.get(guild);
+    const player = this.players.get(guild);
     if (!player) return;
 
     await player.onUserVoiceJoined(user);
   }
 
   public playerUserLeft(user: string) {
-    const player = this.generic_users.get(user);
+    const player = this.users.get(user);
     if (!player) return;
 
     player.onUserVoiceLeft(user);
   }
 
-  public async leaveGuild(guild: string, afk: boolean = false) {
-    const player = this.generic_players.get(guild);
+  public async leaveGuild(guild: string, reason: "UNKNOWN" | "AFK" = "UNKNOWN") {
+    const player = this.players.get(guild);
     if (!player) return;
 
     await player.destroy();
+    this.players.delete(guild);
 
-    if (afk) {
+    let embed: MessageEmbed = null;
+
+    if (reason === "AFK") {
+      embed = new MessageEmbed({
+        description: "I left the voice channel because of inactivity",
+        author: { name: "Left voice channel" },
+        color: "#d61516",
+      });
+    }
+
+    if (embed) {
       try {
         await player.text.send({
-          embeds: [
-            new MessageEmbed({
-              description: "I left the voice channel because of inactivity",
-              author: { name: "Left voice channel" },
-              color: "#d61516",
-            }),
-          ],
+          embeds: [embed],
         });
       } catch (ex) {}
     }
   }
 
   public async joinWithProvider(guild: string, voice: string, text: string) {
-    if (this.generic_players.has(guild)) return this.generic_players.get(guild);
+    if (this.players.has(guild)) return this.players.get(guild);
 
     const player = await GenericPlayer.create(guild, voice, text);
 
-    this.generic_players.set(guild, player);
+    this.players.set(guild, player);
 
     return player;
   }

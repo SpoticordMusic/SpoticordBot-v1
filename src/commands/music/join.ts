@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import { MessageEmbed, TextChannel, VoiceChannel } from "discord.js";
 import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 
-async function execute({member, user, channel, reply}: ICommandExec)
+async function execute({member, user, channel, reply, defer, update}: ICommandExec)
 {
   if (!member.voice.channel) {
     return await reply({
@@ -50,9 +50,10 @@ async function execute({member, user, channel, reply}: ICommandExec)
   }
 
   if (!Spoticord.music_service.playerIsOnline(member.guild.id)) {
+    await defer();
     await Spoticord.music_service.joinWithProvider(member.guild.id, member.voice.channelId, channel.id);
 
-    return await reply({
+    return await update({
       embeds: [new MessageEmbed({
         description: `Come listen along in <#${member.voice.channelId}>`,
         author: {name: 'Connected to voice channel', icon_url: 'https://images.emojiterra.com/mozilla/512px/1f50a.png'},
@@ -75,10 +76,13 @@ async function execute({member, user, channel, reply}: ICommandExec)
 
   if (!Spoticord.music_service.getPlayer(member.guild.id).getHost())
   {
+    await defer();
+
     await Spoticord.music_service.leaveGuild(member.guild.id);
+    await new Promise(resolve => setTimeout(resolve, 500));
     await Spoticord.music_service.joinWithProvider(member.guild.id, member.voice.channelId, channel.id);
 
-    return await reply({
+    return await update({
       embeds: [new MessageEmbed({
         description: `Come listen along in <#${member.voice.channelId}>`,
         author: {name: 'Connected to voice channel', icon_url: 'https://images.emojiterra.com/mozilla/512px/1f50a.png'},

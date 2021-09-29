@@ -12,7 +12,8 @@ export interface ISCPlayer {
   seek(position: number);
   stop();
   
-  getPosition(): Promise<number>
+  getPosition(): Promise<number>;
+  setVolume(volume: number);
 
   destroy(): Promise<void>;
 }

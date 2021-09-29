@@ -63,9 +63,39 @@ async function button(interaction: ButtonInteraction) {
 
 async function previousTrack(interaction: ButtonInteraction) {
   const player = Spoticord.music_service.getPlayer(interaction.guildId);
-  if (!player) return await interaction.update({ content: "idk what happened here" });
-  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guildId))
-    return await interaction.update({ content: "idk what happened here (2)" });
+  if (!player) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not connected to any voice channel",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
+
+  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guildId)) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not playing",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
 
   const host = player.getHost();
   if (interaction.user.id !== host.userId) {
@@ -75,14 +105,47 @@ async function previousTrack(interaction: ButtonInteraction) {
     });
   }
 
-  if (await host.seekPlayback(0)) await updatePlayingMessage(interaction);
+  player.advancePrevious();
+  await interaction.deferUpdate();
+  await wait(2500);
+  await updatePlayingMessage(interaction, true);
 }
 
 async function pausePlayTrack(interaction: ButtonInteraction) {
   const player = Spoticord.music_service.getPlayer(interaction.guildId);
-  if (!player) return await interaction.update({ content: "idk what happened here" });
-  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guildId))
-    return await interaction.update({ content: "idk what happened here (2)" });
+  if (!player) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not connected to any voice channel",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
+
+  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guildId)) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not playing",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
 
   const host = player.getHost();
   if (interaction.user.id !== host.userId) {
@@ -101,9 +164,39 @@ async function pausePlayTrack(interaction: ButtonInteraction) {
 
 async function nextTrack(interaction: ButtonInteraction) {
   const player = Spoticord.music_service.getPlayer(interaction.guild.id);
-  if (!player) await interaction.deleteReply();
-  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guild.id))
-    return await interaction.deferUpdate();
+  if (!player) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not connected to any voice channel",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
+
+  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guild.id)) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not playing",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
 
   const host = player.getHost();
   if (interaction.user.id !== host.userId)
@@ -112,7 +205,7 @@ async function nextTrack(interaction: ButtonInteraction) {
       ephemeral: true,
     });
 
-  player.advanceNext();
+  player.advanceNext(true);
   await interaction.deferUpdate();
   await wait(2500);
   await updatePlayingMessage(interaction, true);
@@ -186,9 +279,9 @@ async function buildPlayingEmbed(guild: string, host: string) {
     positionText += i === quadrant ? "🔵" : "▬";
   }
 
-  positionText = `${isPaused ? "⏸️" : "▶️"} ${positionText}\n ${_strtime(Math.floor(position / 1000))} / ${_strtime(
-    Math.floor(track.metadata.duration / 1000)
-  )}`;
+  positionText = `${isPaused ? "⏸️" : "▶️"} ${positionText}\n:alarm_clock: ${_strtime(
+    Math.floor(position / 1000)
+  )} / ${_strtime(Math.round(track.metadata.duration / 1000))}`;
 
   const prev_button = new MessageButton().setStyle("PRIMARY").setLabel("<<").setCustomId("playing::btn_previous_track");
 

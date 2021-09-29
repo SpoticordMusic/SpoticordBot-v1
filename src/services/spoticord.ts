@@ -1,21 +1,18 @@
 import {
-  ApplicationCommand,
   ButtonInteraction,
   Client,
-  CommandInteraction,
-  CommandInteractionOption,
   Guild,
   GuildMember,
   Intents,
   Interaction,
+  InteractionDeferReplyOptions,
   InteractionReplyOptions,
   Message,
   MessagePayload,
   TextBasedChannels,
-  TextChannel,
   User,
+  WebhookEditMessageOptions,
 } from "discord.js";
-import { Manager, NodeOptions } from "erela.js";
 import ConfigManager from "../config";
 import { DB } from "../db";
 import JSONPoweredDB from "../db/json";
@@ -28,7 +25,7 @@ import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { ISCProvider } from "./provider";
-import { APIApplicationCommandOption } from "@discordjs/builders/node_modules/discord-api-types";
+import { APIApplicationCommandOption, APIMessage } from "@discordjs/builders/node_modules/discord-api-types";
 
 export interface ICommand {
   data: SlashCommandBuilder;
@@ -45,6 +42,8 @@ export interface ICommandExec {
   channel: TextBasedChannels;
   options: Map<string, any>;
   reply: (options: string | InteractionReplyOptions | MessagePayload) => Promise<void>;
+  defer: (options?: InteractionDeferReplyOptions & { fetchReply: true }) => Promise<Message | APIMessage>;
+  update: (options: string | MessagePayload | WebhookEditMessageOptions) => Promise<Message | APIMessage>;
 }
 
 interface SpoticordInitOpts<T extends ISCProvider> {
@@ -205,8 +204,13 @@ export default class Spoticord {
                 break;
               }
 
-              if (localOption.name !== option.name || localOption.type !== option.type || localOption.description !== option.description || localOption.required !== option.required || localOption.default !== option.default)
-              {
+              if (
+                localOption.name !== option.name ||
+                localOption.type !== option.type ||
+                localOption.description !== option.description ||
+                localOption.required !== option.required ||
+                localOption.default !== option.default
+              ) {
                 needsRefresh = true;
                 break;
               }
@@ -269,6 +273,8 @@ export default class Spoticord {
         member: interaction.member as GuildMember,
         source: "interaction",
         reply: interaction.reply.bind(interaction),
+        defer: interaction.deferReply.bind(interaction),
+        update: interaction.editReply.bind(interaction),
         channel: interaction.channel,
         options: new Map(interaction.options.data.map((i) => [i.name, i.value])),
       });
