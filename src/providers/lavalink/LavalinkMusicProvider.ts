@@ -1,15 +1,15 @@
 import { Manager, NodeOptions } from "erela.js";
 import { ISCProvider } from "../../services/provider";
 import Spoticord from "../../services/spoticord";
-import GenericPlayer from "../../services/generic/generic_player";
+import GenericPlayer from "../../services/generic/player";
 import LavalinkMusicPlayer from "./LavalinkMusicPlayer";
 
 export default class LavalinkMusicProvider implements ISCProvider {
   public readonly manager: Manager;
   
-  public constructor() {
+  public constructor(options: {nodes: NodeOptions[]}) {
     this.manager = new Manager({
-      nodes: Spoticord.config.get("nodes") as NodeOptions[],
+      nodes: options.nodes,
       send: (id, payload) => {
         const guild = Spoticord.client.guilds.cache.get(id);
         guild && guild.shard.send(payload);

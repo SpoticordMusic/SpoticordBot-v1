@@ -3,7 +3,7 @@ import { Player, Track as LavaTrack, TrackEndEvent } from "erela.js";
 import { Track } from "@spoticord/nodesdc";
 import { ISCPlayer } from "../../services/provider";
 import Spoticord from "../../services/spoticord";
-import GenericPlayer from "../../services/generic/generic_player";
+import GenericPlayer from "../../services/generic/player";
 import LavalinkMusicProvider from "./LavalinkMusicProvider";
 
 export default class LavalinkMusicPlayer implements ISCPlayer {

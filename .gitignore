@@ -7,6 +7,7 @@ db.json
 
 # Configuration files
 config.json
+lavalink.config.json
 
 # VSCode
 .vscode/

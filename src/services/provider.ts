@@ -1,5 +1,5 @@
 import { Track } from "@spoticord/nodesdc";
-import GenericPlayer from "./generic/generic_player";
+import GenericPlayer from "./generic/player";
 
 export interface ISCProvider {
   createPlayer(generic: GenericPlayer): Promise<ISCPlayer>

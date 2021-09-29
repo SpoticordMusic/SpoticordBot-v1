@@ -47,6 +47,11 @@ export interface ICommandExec {
   reply: (options: string | InteractionReplyOptions | MessagePayload) => Promise<void>;
 }
 
+interface SpoticordInitOpts<T extends ISCProvider> {
+  provider: new (...args: any[] | undefined) => T;
+  providerArgs: any[];
+}
+
 export default class Spoticord {
   public static config: ConfigManager;
   public static client: Client;
@@ -56,7 +61,8 @@ export default class Spoticord {
   public static linker_service: LinkerService;
   public static provider: ISCProvider;
 
-  private static providerContructor: new () => ISCProvider;
+  private static providerContructor: new (...args: any[] | undefined) => ISCProvider;
+  private static providerArgs: any[];
 
   private static commands: Map<string, ICommand>;
 
@@ -64,8 +70,9 @@ export default class Spoticord {
     return this.config.get("token");
   }
 
-  public static async initialize<T extends ISCProvider>(provider: new () => T) {
-    this.providerContructor = provider;
+  public static async initialize<T extends ISCProvider>(opts: SpoticordInitOpts<T>) {
+    this.providerContructor = opts.provider;
+    this.providerArgs = opts.providerArgs;
 
     this.onClientReady = this.onClientReady.bind(this);
 
@@ -127,7 +134,8 @@ export default class Spoticord {
 
     console.log("[INFO] Discord ready, starting Provider initialization...");
 
-    this.provider = new this.providerContructor();
+    if (this.providerArgs) this.provider = new this.providerContructor(...this.providerArgs);
+    else this.provider = new this.providerContructor();
 
     console.log(`[INFO] Lavalink initialized, starting Spotify initialization`);
 

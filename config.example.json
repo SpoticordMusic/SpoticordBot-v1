@@ -1,23 +1,17 @@
 {
-    "token": "ODc5QDQzOTawMjD4MzFzNTky.X6azPA.1UPpLtG8bBq4fnSwaglUQCoYkBw",
-    "spotify_client_id": "9307524cb02f123a45065e7f5da4fbd2",
-    "spotify_client_secret": "f975c551569f4e9122a7fe10f89d0f7e",
-    "nodes": [{
-        "identifier": "default",
-        "host": "localhost",
-        "port": 2333,
-        "password": "youshallnotpass"
-    }],
-    
-    "realtime": {
-        "host": "127.0.0.1",
-        "port": 1234
-    },
-    "database": {
-        "strategy": "json",
-        "filename": "db"
-    },
-    "linker_hostname": "0.0.0.0",
-    "linker_port": 42612,
-    "spotify_redirect_url": "http://myepicwebsite.lol/link"
+  "token": "ODc5QDQzOTawMjD4MzFzNTky.X6azPA.1UPpLtG8bBq4fnSwaglUQCoYkBw",
+  "spotify_client_id": "9307524cb02f123a45065e7f5da4fbd2",
+  "spotify_client_secret": "f975c551569f4e9122a7fe10f89d0f7e",
+
+  "realtime": {
+    "host": "127.0.0.1",
+    "port": 1234
+  },
+  "database": {
+    "strategy": "json",
+    "filename": "db"
+  },
+  "linker_hostname": "0.0.0.0",
+  "linker_port": 42612,
+  "spotify_redirect_url": "http://myepicwebsite.lol/link"
 }

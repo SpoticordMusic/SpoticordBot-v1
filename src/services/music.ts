@@ -1,6 +1,6 @@
 import { MessageEmbed, VoiceState } from "discord.js";
 import Spoticord from "./spoticord";
-import GenericPlayer from "./generic/generic_player";
+import GenericPlayer from "./generic/player";
 
 export default class MusicPlayerService {
   private generic_players: Map<string, GenericPlayer> = new Map<string, GenericPlayer>();

@@ -2,7 +2,7 @@ import { Guild, StageChannel, TextChannel, VoiceChannel } from "discord.js";
 import Spoticord from "../spoticord";
 import { SDC, TokenManager, Track as SDCTrack, Track } from "@spoticord/nodesdc";
 import { ISCPlayer } from "../provider";
-import GenericUser from "./generic_user";
+import GenericUser from "./user";
 
 export default class GenericPlayer {
   private constructor(public readonly guildId: string, public readonly voiceId: string, public readonly textId: string) {}
@@ -204,7 +204,7 @@ export default class GenericPlayer {
 
   // Start the player kick timer
   protected tryStartPlayerKickTimeout() {
-    if (this.stayForever || (this.voice.members.size === 2 && false)) {
+    if (this.stayForever || (this.voice.members.size === 2)) {
       this.stopPlayerKickTimeout();
       return;
     }
@@ -212,12 +212,12 @@ export default class GenericPlayer {
     if (this.kickTimeout) return;
 
     this.kickTimeout = setTimeout(() => {
-      if (this.voice.members.size === 2 && false) return;
+      if (this.voice.members.size === 2) return;
 
       if (this.stayForever) return;
 
       Spoticord.music_service.leaveGuild(this.guildId, true);
-    }, 5 * 1000);
+    }, 5 * 60 * 1000);
   }
 
   // Cancel the player kick timer

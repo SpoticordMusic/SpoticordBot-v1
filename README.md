@@ -62,7 +62,6 @@ You can find an example `config.example.json` file at the root of the repo. This
 | token                 | **Yes**  | N/A                      | The Discord bot token
 | spotify_client_id     | **Yes**  | N/A                      | The Spotify client ID
 | spotify_client_secret | **Yes**  | N/A                      | The Spotify client secret
-| nodes                 | **Yes**  | N/A                      | An array of objects containing lavalink Nodes (identifier: string, host: string, port: number, password: string)
 | realtime              | No       | Null (Disabled)          | An object containing `host` (string) and `port` (number) for listening on the Realtime server.
 | database              | No       | JsonDB at ./db.json      | [Setting up a database](#setting-up-a-database)
 | linker_hostname       | No       | '127.0.0.1'              | The hostname the linker website will listen on
@@ -105,7 +104,9 @@ You can download Lavalink from [the official releases page](https://github.com/f
 
 After downloading the jar file you will need to create a new file called `application.yml` with your preferred Lavalink configuration. A template version can be found [here](https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example). If you need more information about Lavalink you can visit the [Lavalink repo](https://github.com/freyacodes/Lavalink).
 
-For changing the `application.yml` the only two fields that are the most important are the `port` and `password` field. These values need to be changed accordingly inside the `nodes` field in the `config.json` file
+For changing the `application.yml` the only two fields that are the most important are the `port` and `password` field. These values need to be changed accordingly inside the `nodes` field in the `config.json` file.
+
+Next up you will have to create a `lavalink.config.json` file (an example has been provided). This file will contain all the nodes that the bot may use to communicate with Lavalink.
 
 ## Setting up a Discord application
 Create a new Discord application and bot in your [Discord Developer Dashboard](https://discord.com/developers). If you need help setting up your application then Google is your best friend.
