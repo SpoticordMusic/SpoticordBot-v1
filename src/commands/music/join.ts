@@ -38,7 +38,7 @@ async function execute({member, user, channel, reply}: ICommandExec)
   }
 
   // Check if user is already using bot in another guild
-  if (Spoticord.music_service.getUserState(user.id) === 'ACTIVE') {
+  if (Spoticord.music_service.userIsOnline(user.id)) {
     return await reply({
       embeds: [new MessageEmbed({
         description: 'Spoticord is already active on your Discord account somewhere else',
@@ -49,8 +49,7 @@ async function execute({member, user, channel, reply}: ICommandExec)
     });
   }
 
-  if (Spoticord.music_service.getPlayerState(member.guild.id) === 'DISCONNECTED') {
-    //await Spoticord.music_service.joinChannel(member.guild.id, member.voice.channel as VoiceChannel, channel as TextChannel);
+  if (!Spoticord.music_service.playerIsOnline(member.guild.id)) {
     await Spoticord.music_service.joinWithProvider(member.guild.id, member.voice.channelId, channel.id);
 
     return await reply({
@@ -62,7 +61,7 @@ async function execute({member, user, channel, reply}: ICommandExec)
     });
   }
 
-  if (Spoticord.music_service.getPlayerChannel(member.guild.id).id === member.voice.channelId) {
+  if (Spoticord.music_service.getPlayer(member.guild.id).voiceId === member.voice.channelId) {
     await Spoticord.music_service.playerUserJoin(member.guild.id, user.id);
 
     return await reply({
@@ -74,10 +73,10 @@ async function execute({member, user, channel, reply}: ICommandExec)
     });
   }
 
-  if (!Spoticord.music_service.getPlayerHost(member.guild.id))
+  if (!Spoticord.music_service.getPlayer(member.guild.id).getHost())
   {
     await Spoticord.music_service.leaveGuild(member.guild.id);
-    await Spoticord.music_service.joinChannel(member.guild.id, member.voice.channel as VoiceChannel, channel as TextChannel);
+    await Spoticord.music_service.joinWithProvider(member.guild.id, member.voice.channelId, channel.id);
 
     return await reply({
       embeds: [new MessageEmbed({

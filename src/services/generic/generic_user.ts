@@ -53,6 +53,17 @@ export default class GenericUser {
     })).status === 204;
   }
 
+  public async setSpoticordDevice() {
+    return (await this.rest({
+      method: 'PUT',
+      path: '/me/player',
+      authorization: true,
+      body: {
+        device_ids: [this.dealer.getDeviceID()]
+      }
+    })).status === 204;
+  }
+
   private async rest(opts: RestOptions) {
     return await axios.request(await this.buildAxiosOpts(opts));
   }
@@ -62,7 +73,7 @@ export default class GenericUser {
       method: opts.method,
       url: `https://api.spotify.com/v1${opts.path}`,
       headers: {
-        Authorization: opts.authorization ? await this.token.retrieveToken() : undefined,
+        Authorization: opts.authorization ? `Bearer ${await this.token.retrieveToken()}` : undefined,
         ...this.mapToObj(opts.headers)
       },
       data: opts.body,

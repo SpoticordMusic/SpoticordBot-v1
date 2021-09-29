@@ -3,7 +3,7 @@ import { Player, Track as LavaTrack, TrackEndEvent } from "erela.js";
 import { Track } from "@spoticord/nodesdc";
 import { ISCPlayer } from "../../services/provider";
 import Spoticord from "../../services/spoticord";
-import GenericPlayer from "../../services/spotify/generic_player";
+import GenericPlayer from "../../services/generic/generic_player";
 import LavalinkMusicProvider from "./LavalinkMusicProvider";
 
 export default class LavalinkMusicPlayer implements ISCPlayer {
@@ -11,6 +11,8 @@ export default class LavalinkMusicPlayer implements ISCPlayer {
 
   private current_youtube_track: LavaTrack;
   private current_spotify_track: Track;
+
+  private overridePosition: number = -1;
 
   public constructor(
     private readonly provider: LavalinkMusicProvider,
@@ -28,7 +30,7 @@ export default class LavalinkMusicPlayer implements ISCPlayer {
 
     this.onPlayerEnd = this.onPlayerEnd.bind(this);
 
-    provider.manager.off("queueEnd", this.onPlayerEnd).on("queueEnd", this.onPlayerEnd);
+    provider.manager.on("queueEnd", this.onPlayerEnd);
 
     this.player.setVolume(40);
   }
@@ -65,15 +67,18 @@ export default class LavalinkMusicPlayer implements ISCPlayer {
 
     await this.player.play(this.current_youtube_track, { startTime: this.spotify_to_yt(position) });
 
-    if (paused) setTimeout(() => this.player.pause(true), 100);
+    if (paused) {
+      this.overridePosition = this.spotify_to_yt(position);
+      setTimeout(() => this.player.pause(true), 100);
+    }
   }
 
   public pause() {
-    !this.player.paused && this.player.pause(true);
+    this.player.pause(true);
   }
 
   public resume() {
-    this.player.paused && this.player.pause(false);
+    this.player.pause(false);
   }
 
   public seek(position: number) {
@@ -84,8 +89,21 @@ export default class LavalinkMusicPlayer implements ISCPlayer {
     this.player.stop();
   }
 
-  public getPosition(): Promise<number> {
-    return Promise.resolve(this.yt_to_spotify(this.player.position));
+  public getPosition() {
+    let position = this.player.position;
+    if (this.overridePosition > -1 && !position) {
+      position = this.overridePosition;
+      this.overridePosition = -1;
+    }
+
+    return Promise.resolve(this.yt_to_spotify(position));
+  }
+
+  public destroy() {
+    this.player.destroy();
+    this.provider.manager.off("queueEnd", this.onPlayerEnd);
+  
+    return Promise.resolve();
   }
 
   private onPlayerEnd(player: Player, track: LavaTrack, data: TrackEndEvent) {

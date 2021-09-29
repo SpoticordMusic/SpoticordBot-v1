@@ -1,7 +1,7 @@
 import { Manager, NodeOptions } from "erela.js";
 import { ISCProvider } from "../../services/provider";
 import Spoticord from "../../services/spoticord";
-import GenericPlayer from "../../services/spotify/generic_player";
+import GenericPlayer from "../../services/generic/generic_player";
 import LavalinkMusicPlayer from "./LavalinkMusicPlayer";
 
 export default class LavalinkMusicProvider implements ISCProvider {

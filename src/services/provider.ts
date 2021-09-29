@@ -1,5 +1,5 @@
 import { Track } from "@spoticord/nodesdc";
-import GenericPlayer from "./spotify/generic_player";
+import GenericPlayer from "./generic/generic_player";
 
 export interface ISCProvider {
   createPlayer(generic: GenericPlayer): Promise<ISCPlayer>
@@ -13,4 +13,6 @@ export interface ISCPlayer {
   stop();
   
   getPosition(): Promise<number>
+
+  destroy(): Promise<void>;
 }

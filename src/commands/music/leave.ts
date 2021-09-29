@@ -3,7 +3,7 @@ import { MessageEmbed } from "discord.js";
 import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 
 async function execute({ member, reply }: ICommandExec) {
-  if (Spoticord.music_service.getPlayerState(member.guild.id) === "DISCONNECTED") {
+  if (!Spoticord.music_service.playerIsOnline(member.guild.id)) {
     return await reply({
       embeds: [
         new MessageEmbed({
@@ -21,8 +21,8 @@ async function execute({ member, reply }: ICommandExec) {
   }
 
   if (
-    !Spoticord.music_service.getPlayerHost(member.guild.id) ||
-    Spoticord.music_service.getPlayerHost(member.guild.id).discord_id === member.id
+    !Spoticord.music_service.getPlayer(member.guild.id).getHost() ||
+    Spoticord.music_service.getPlayer(member.guild.id).getHost().userId === member.id
   ) {
     await Spoticord.music_service.leaveGuild(member.guild.id);
 
