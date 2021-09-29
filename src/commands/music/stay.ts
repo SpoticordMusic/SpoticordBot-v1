@@ -1,9 +1,9 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { MessageEmbed } from "discord.js";
-import Spoticord, { ICommandExec } from "../../services/spoticord";
+import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 
 async function execute({ member, reply }: ICommandExec) {
-  if (Spoticord.music_service.getPlayerState(member.guild.id) === "DISCONNECTED") {
+  if (!Spoticord.music_service.playerIsOnline(member.guild.id)) {
     return await reply({
       embeds: [
         new MessageEmbed({
@@ -20,7 +20,7 @@ async function execute({ member, reply }: ICommandExec) {
     });
   }
 
-  const isEnabled = Spoticord.music_service.toggle247(member.guild.id);
+  const isEnabled = Spoticord.music_service.getPlayer(member.guild.id).toggleStay();
 
   return await reply({
     embeds: [
@@ -37,4 +37,5 @@ async function execute({ member, reply }: ICommandExec) {
 export default {
   data: new SlashCommandBuilder().setName("stay").setDescription("Request the bot to stay in the call indefinitely"),
   execute,
-};
+  requires: ['guild']
+} as ICommand;

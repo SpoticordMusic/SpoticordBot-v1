@@ -4,8 +4,8 @@
   "description": "Spoticord Music Bot",
   "main": "build/index.js",
   "scripts": {
-    "build": "tsc",
-    "compile": "tsc && node .",
+    "build": "tsc -p ./libs/NodeSDC/tsconfig.json && tsc -p tsconfig.json",
+    "compile": "npm run build && node .",
     "start": "node ."
   },
   "repository": {
@@ -26,6 +26,7 @@
   "dependencies": {
     "@discordjs/rest": "^0.1.0-canary.0",
     "@discordjs/voice": "^0.6.0",
+    "@spoticord/nodesdc": "file:libs/NodeSDC",
     "axios": "^0.21.4",
     "body-parser": "^1.19.0",
     "discord-api-types": "^0.23.1",

@@ -11,7 +11,6 @@ export default class ConfigManager {
             this.config = new Map(Object.entries(JSON.parse(buf)));
 
             assert(this.config.has('token'), 'Missing field: token');
-            assert(this.config.has('prefix'), 'Missing field: prefix');
 
             assert(this.config.has('spotify_client_id'), 'Missing field: spotify_client_id');
             assert(this.config.has('spotify_client_secret'), 'Missing field: spotify_client_secret');
@@ -32,12 +31,12 @@ export default class ConfigManager {
                 });
             }
 
-            assert(this.config.has('nodes'), 'Missing field: nodes');
+            // assert(this.config.has('nodes'), 'Missing field: nodes');
 
-            const nodes = this.config.get('nodes');
+            // const nodes = this.config.get('nodes');
 
-            assert(Array.isArray(nodes), 'Dirty field: nodes');
-            assert(nodes.length, 'Dirty field: nodes');
+            // assert(Array.isArray(nodes), 'Dirty field: nodes');
+            // assert(nodes.length, 'Dirty field: nodes');
 
             if (this.config.has('realtime')) {
                 const realtime = this.config.get('realtime');

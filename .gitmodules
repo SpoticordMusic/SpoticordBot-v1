@@ -1,0 +1,3 @@
+[submodule "libs/NodeSDC"]
+	path = libs/NodeSDC
+	url = https://github.com/SpoticordMusic/NodeSDC.git

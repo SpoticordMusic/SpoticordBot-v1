@@ -17,7 +17,7 @@ async function execute({user, reply}: ICommandExec)
     return;
   }
 
-  Spoticord.music_service.destroyUser(user.id);
+  Spoticord.music_service.playerUserLeft(user.id);
   await Spoticord.database.deleteToken(user.id);
 
   await reply({

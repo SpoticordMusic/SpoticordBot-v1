@@ -31,7 +31,7 @@ Just join a voice channel with the bot, go to your Spotify player on either your
 Users who join the Spotify party after you have started one will have their Spotify mimic what yours is doing, so that these users can see what kind of tunes you are playing.
 
 ## "Do I need to setup my own bot to use this?"
-<b>No</b>, Spoticord already has an official bot and can be invited via the [Spoticord website](https://spoticord.com/). This version of Spoticord also contains extra features (like an analytics dashboard) and will receive additional features in the future (like live lyrics perhaps 👀). You will only have to follow the setup if you want to run Spoticord as your own bot, just remember that running Spoticord on your own can come with some complications.
+<b>No</b>, Spoticord already has an official bot and can be invited via the [Spoticord website](https://spoticord.com/). This version of Spoticord also contains extra features and will receive additional exclusive features in the future. You will only have to follow the setup if you want to run Spoticord as your own bot, just remember that running Spoticord on your own can come with some complications.
 
 ## Difference between the open source version and the live version
 Fundamentally, there is no difference. Both the open source and live version use your Spotify player as the control panel for playing music. However the live version may have limited functionality on some quality of life features, like renaming the Spoticord device in Spotify. This is one of the features that is free when you are using the selfhosted version. Setting up your own version of Spoticord is also a lot more difficult than just inviting the live version to your server(s).
@@ -45,7 +45,7 @@ I believe that in this world we all should have at least the privilege of seeing
 # Setting up
 Get started by cloning this project and installing the required dependencies.
 ```
-$ git clone https://github.com/SpoticordMusic/Spoticord.git
+$ git clone --recurse-submodules https://github.com/SpoticordMusic/Spoticord.git
 $ cd Spoticord
 $ npm install
 ```
@@ -59,11 +59,9 @@ You can find an example `config.example.json` file at the root of the repo. This
 
 | Key                   | Required | Default                  | Description |
 | --------------------- |:--------:|:------------------------:| ----------- |
-| prefix                | **Yes**  | N/A                      | The command prefix (e.g. '+', '!')
 | token                 | **Yes**  | N/A                      | The Discord bot token
 | spotify_client_id     | **Yes**  | N/A                      | The Spotify client ID
 | spotify_client_secret | **Yes**  | N/A                      | The Spotify client secret
-| nodes                 | **Yes**  | N/A                      | An array of objects containing lavalink Nodes (identifier: string, host: string, port: number, password: string)
 | realtime              | No       | Null (Disabled)          | An object containing `host` (string) and `port` (number) for listening on the Realtime server.
 | database              | No       | JsonDB at ./db.json      | [Setting up a database](#setting-up-a-database)
 | linker_hostname       | No       | '127.0.0.1'              | The hostname the linker website will listen on
@@ -106,7 +104,9 @@ You can download Lavalink from [the official releases page](https://github.com/f
 
 After downloading the jar file you will need to create a new file called `application.yml` with your preferred Lavalink configuration. A template version can be found [here](https://github.com/freyacodes/Lavalink/blob/master/LavalinkServer/application.yml.example). If you need more information about Lavalink you can visit the [Lavalink repo](https://github.com/freyacodes/Lavalink).
 
-For changing the `application.yml` the only two fields that are the most important are the `port` and `password` field. These values need to be changed accordingly inside the `nodes` field in the `config.json` file
+For changing the `application.yml` the only two fields that are the most important are the `port` and `password` field. These values need to be changed accordingly inside the `nodes` field in the `config.json` file.
+
+Next up you will have to create a `lavalink.config.json` file (an example has been provided). This file will contain all the nodes that the bot may use to communicate with Lavalink.
 
 ## Setting up a Discord application
 Create a new Discord application and bot in your [Discord Developer Dashboard](https://discord.com/developers). If you need help setting up your application then Google is your best friend.
@@ -122,7 +122,7 @@ Once you have your application ready you can copy your client ID and client secr
 If only you are planning to use your bot then you can simply add `http://localhost:4481/` to your Spotify application as a redirect URL. Don't forget to remove the `spotify_redirect_url` from the `config.json` if you do this. If you are however planning on other people using this bot too, then you need to make sure the bot can be reached using either port forwarding or hosting the bot on a VPS. Set the `linker_hostname` to '0.0.0.0' in the `config.json` and set the `linker_port` to a port of your choosing. Then add your preferred redirect url to your Spotify application and to the `spotify_redirect_url` field in the `config.json` file.
 
 ## Building the source code
-When this is all finally done you can build the source by running `npm run build` and then start the bot with `npm run start`. These commands can also be combined by using the `npm run compile` command.
+When this is all finally done you can build the source by running `npm run build` and then start the bot with `npm run start`. These commands can also be combined by using `npm run compile`.
 
 ## "I still haven't got a clue"
 If you get stuck or simply don't know how to continue with one of the steps then feel free to join the [Spoticord Support Server](https://discord.gg/wRCyhVqBZ5) and ask away inside the [#questions](https://discord.com/channels/779292533053456404/782587728126279692) channel.

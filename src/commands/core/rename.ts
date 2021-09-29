@@ -26,6 +26,7 @@ async function execute({user, options, reply}: ICommandExec) {
   }
 
   await Spoticord.database.setDeviceName(user.id, name);
+  await Spoticord.music_service.onDeviceRenamed(user.id, name);
 
   await reply({
     embeds: [new MessageEmbed({

@@ -1,12 +1,12 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { ButtonInteraction, Message, MessageActionRow, MessageButton, MessageEmbed } from "discord.js";
-import Spoticord, { ICommandExec } from "../../services/spoticord";
+import Spoticord, { ICommand, ICommandExec } from "../../services/spoticord";
 import { promisify } from "util";
 
 const wait = promisify(setTimeout);
 
 async function execute({ member, reply }: ICommandExec) {
-  if (Spoticord.music_service.getPlayerState(member.guild.id) === "DISCONNECTED") {
+  if (!Spoticord.music_service.playerIsOnline(member.guild.id)) {
     return await reply({
       embeds: [
         new MessageEmbed({
@@ -23,7 +23,7 @@ async function execute({ member, reply }: ICommandExec) {
     });
   }
 
-  const host = Spoticord.music_service.getPlayerHost(member.guild.id);
+  const host = Spoticord.music_service.getPlayer(member.guild.id).getHost();
 
   if (!host) {
     return await reply({
@@ -42,7 +42,7 @@ async function execute({ member, reply }: ICommandExec) {
     });
   }
 
-  return await await reply(buildPlayingEmbed(member.guild.id, host.discord_id));
+  return await await reply(await buildPlayingEmbed(member.guild.id, host.userId));
 }
 
 async function button(interaction: ButtonInteraction) {
@@ -63,72 +63,152 @@ async function button(interaction: ButtonInteraction) {
 
 async function previousTrack(interaction: ButtonInteraction) {
   const player = Spoticord.music_service.getPlayer(interaction.guildId);
-  if (!player) return await interaction.update({ content: "idk what happened here" });
-  if (
-    !player.getHost() ||
-    Spoticord.music_service.getPlayerState(interaction.guildId) === "DISCONNECTED" ||
-    Spoticord.music_service.getPlayerState(interaction.guildId) === "INACTIVE"
-  )
-    return await interaction.update({ content: "idk what happened here (2)" });
+  if (!player) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not connected to any voice channel",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
+
+  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guildId)) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not playing",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
 
   const host = player.getHost();
-  if (interaction.user.id !== host.discord_id) {
+  if (interaction.user.id !== host.userId) {
     return await interaction.reply({
       ephemeral: true,
       content: "You must be the host to use the media buttons",
     });
   }
 
-  if (await player.seek(0)) await updatePlayingMessage(interaction);
+  player.advancePrevious();
+  await interaction.deferUpdate();
+  await wait(2500);
+  await updatePlayingMessage(interaction, true);
 }
 
 async function pausePlayTrack(interaction: ButtonInteraction) {
   const player = Spoticord.music_service.getPlayer(interaction.guildId);
-  if (!player) return await interaction.update({ content: "idk what happened here" });
-  if (
-    !player.getHost() ||
-    Spoticord.music_service.getPlayerState(interaction.guildId) === "DISCONNECTED" ||
-    Spoticord.music_service.getPlayerState(interaction.guildId) === "INACTIVE"
-  )
-    return await interaction.update({ content: "idk what happened here (2)" });
+  if (!player) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not connected to any voice channel",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
+
+  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guildId)) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not playing",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
 
   const host = player.getHost();
-  if (interaction.user.id !== host.discord_id) {
+  if (interaction.user.id !== host.userId) {
     return await interaction.reply({
       ephemeral: true,
       content: "You must be the host to use the media buttons",
     });
   }
 
-  if (player.getPlayerInfo().paused) {
-    if (await player.resume()) await updatePlayingMessage(interaction);
+  if (player.isPaused()) {
+    if (await host.resumePlayback()) await updatePlayingMessage(interaction);
   } else {
-    if (await player.pause()) await updatePlayingMessage(interaction);
+    if (await host.pausePlayback()) await updatePlayingMessage(interaction);
   }
 }
 
 async function nextTrack(interaction: ButtonInteraction) {
   const player = Spoticord.music_service.getPlayer(interaction.guild.id);
-  if (!player) await interaction.deleteReply();
-  if (
-    !player.getHost() ||
-    Spoticord.music_service.getPlayerState(interaction.guild.id) === "DISCONNECTED" ||
-    Spoticord.music_service.getPlayerState(interaction.guild.id) === "INACTIVE"
-  )
-    return await interaction.deferUpdate();
+  if (!player) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not connected to any voice channel",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
+
+  if (!player.getHost() || !Spoticord.music_service.playerIsOnline(interaction.guild.id)) {
+    await interaction.deferUpdate();
+    return await (interaction.message as Message).edit({
+      embeds: [
+        new MessageEmbed({
+          description: "The bot is currently not playing",
+          author: {
+            name: "Cannot perform action",
+            icon_url:
+              "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Forbidden_Symbol_Transparent.svg/1200px-Forbidden_Symbol_Transparent.svg.png",
+          },
+          color: "#d61516",
+        }),
+      ],
+    });
+  }
 
   const host = player.getHost();
-  if (interaction.user.id !== host.discord_id)
+  if (interaction.user.id !== host.userId)
     return await interaction.reply({
       content: "You must be the host to use the media buttons",
       ephemeral: true,
     });
 
-  if (await player.next()) {
-    await interaction.deferUpdate();
-    await wait(2500);
-    await updatePlayingMessage(interaction, true);
-  }
+  player.advanceNext(true);
+  await interaction.deferUpdate();
+  await wait(2500);
+  await updatePlayingMessage(interaction, true);
 }
 
 async function updatePlayingMessage(button: ButtonInteraction, dont_defer: boolean = false) {
@@ -136,7 +216,7 @@ async function updatePlayingMessage(button: ButtonInteraction, dont_defer: boole
     const message = button.message as Message;
     if (!message.editable) return;
 
-    if (Spoticord.music_service.getPlayerState(message.guild.id) === "DISCONNECTED") {
+    if (!Spoticord.music_service.playerIsOnline(message.guild.id)) {
       return await message.edit({
         embeds: [
           new MessageEmbed({
@@ -152,7 +232,7 @@ async function updatePlayingMessage(button: ButtonInteraction, dont_defer: boole
       });
     }
 
-    const host = Spoticord.music_service.getPlayerHost(message.guild.id);
+    const host = Spoticord.music_service.getPlayer(message.guild.id).getHost();
 
     if (!host) {
       return await message.edit({
@@ -170,7 +250,7 @@ async function updatePlayingMessage(button: ButtonInteraction, dont_defer: boole
       });
     }
 
-    return await message.edit(buildPlayingEmbed(message.guild.id, host.discord_id));
+    return await message.edit(await buildPlayingEmbed(message.guild.id, host.userId));
   } catch (ex) {
     console.debug(ex);
   } finally {
@@ -181,16 +261,17 @@ async function updatePlayingMessage(button: ButtonInteraction, dont_defer: boole
   }
 }
 
-function buildPlayingEmbed(guild: string, host: string) {
-  const [spotify_track, youtube_track] = Spoticord.music_service.getTrackInfo(guild);
-  const authors = spotify_track.metadata.authors.map((author) => author.name).join(", ");
+async function buildPlayingEmbed(guild: string, host: string) {
+  const track = Spoticord.music_service.getPlayer(guild).getTrack();
+  const authors = track.metadata.authors.map((author) => author.name).join(", ");
 
-  const dcUser = Spoticord.music_service.getDiscordUser(host);
+  const dcUser = Spoticord.client.users.cache.get(host);
+  const player = Spoticord.music_service.getPlayer(guild);
 
-  const player_info = Spoticord.music_service.getPlayer(guild)?.getPlayerInfo();
-  const isPaused = player_info?.paused ?? true;
+  const position = await player.getPosition();
+  const isPaused = player.isPaused();
 
-  const quadrant = Math.floor((player_info?.position / player_info?.youtube_track.duration) * 20) ?? -1;
+  const quadrant = Math.floor((position / track.metadata.duration) * 20) ?? -1;
 
   let positionText = "";
 
@@ -198,9 +279,9 @@ function buildPlayingEmbed(guild: string, host: string) {
     positionText += i === quadrant ? "🔵" : "▬";
   }
 
-  positionText = `${isPaused ? "⏸️" : "▶️"} ${positionText}\n ${_strtime(Math.floor(player_info.position / 1000))} / ${_strtime(
-    Math.floor(player_info.youtube_track.duration / 1000)
-  )}`;
+  positionText = `${isPaused ? "⏸️" : "▶️"} ${positionText}\n:alarm_clock: ${_strtime(
+    Math.floor(position / 1000)
+  )} / ${_strtime(Math.round(track.metadata.duration / 1000))}`;
 
   const prev_button = new MessageButton().setStyle("PRIMARY").setLabel("<<").setCustomId("playing::btn_previous_track");
 
@@ -220,13 +301,13 @@ function buildPlayingEmbed(guild: string, host: string) {
           name: "Currently Playing",
           icon_url: "https://www.freepnglogos.com/uploads/spotify-logo-png/file-spotify-logo-png-4.png",
         },
-        title: `${authors} - ${spotify_track.metadata.name}`,
-        url: `https://open.spotify.com/track/${spotify_track.metadata.uri.split(":")[2]}`,
-        description: `Click **[here](${youtube_track.uri})** for the YouTube version\n\n${positionText}`,
+        title: `${authors} - ${track.metadata.name}`,
+        url: `https://open.spotify.com/track/${track.metadata.uri.split(":")[2]}`,
+        description: positionText,
         footer: dcUser ? { text: `${dcUser.username}`, icon_url: dcUser.avatarURL() } : undefined,
         color: "#0773d6",
         thumbnail: {
-          url: spotify_track.metadata.images.sort((a, b) => -(a.width * a.height - b.width * b.height))[0].url,
+          url: track.metadata.images.sort((a, b) => -(a.width * a.height - b.width * b.height))[0].url,
         },
       }),
     ],
@@ -251,4 +332,5 @@ export default {
   data: new SlashCommandBuilder().setName("playing").setDescription("Display which song is currently being played"),
   execute,
   button,
-};
+  requires: ["guild"],
+} as ICommand;
