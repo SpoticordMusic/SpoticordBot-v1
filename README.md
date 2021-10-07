@@ -4,7 +4,7 @@
 
 # Spoticord
 
-<sub><sup>First of all I want to tell everyone that I am terrible at making README's so if you see something horrible please let me know 🙃</sup></sub>
+⚠️ The official Spoticord bot is starting to grow, causing me to start implementing code for sharding, apis and big backend stuff. This unfortunately means that I will no longer be providing updates to this repository. ⚠️
 
 ## Table of contents
 
